@@ -14,22 +14,21 @@ import pickle
 import os
 import select
 
-
 class cell():
-    _Types= enum.Enum("Cells","AddCon Req Resp")
+    _Types = ["AddCon", "Req", "Resp"]
 
-    def __init__(self,isconnection,isreq,payload,IV=None,salt=None,signature = None):
-        if(isconnection):
-            self.type = self._Types.AddCon  # is a connection request. so essentially some key is being pushed out here.
+    def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None):
+        if (isconnection):
+            self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
         else:
-            if(isreq):
-                self.type = self._Types.Req   # is a request.
+            if (isreq):
+                self.type = self._Types[1]  # is a request.
             else:
-                self.type = self._Types.Resp
-        if(self.type ==self._Types.Req):
+                self.type = self._Types[2]
+        if (self.type == self._Types[1]):
             self.payload = payload
         else:  # is a connection request or response...
-            if(self.type == self._Types.Resp): #is a response. Requires a signature.
+            if (self.type == self._Types[2]):  # is a response. Requires a signature.
                 self.signature = signature
             self.payload = payload  # in this case, it should contain some public key in byte form.
             self.IV = IV  # save the IV since it's a connection cell.
@@ -99,7 +98,7 @@ class Server():
                     obtainedCell = clientsocket.recv(4096)  # obtain their public key
                     obtainedCell = self.decrypt(obtainedCell) #decrypt the item.
                     obtainedCell = pickle.loads(obtainedCell) # i.e grab the cell that was passed forward.
-                    if(obtainedCell.type != obtainedCell._Types.AddCon):
+                    if(obtainedCell.type != obtainedCell._Types[0]):
                         break # it was not a connection request.
                     generatedPrivateKey,derivedkey= self.ExchangeKeys(clientsocket,obtainedCell) #obtain the generated public key, and the derived key.
                     clientclass = client(clientsocket, derivedkey, generatedPrivateKey)
@@ -130,7 +129,7 @@ class Server():
                 else:
                     received_data = self.decrypt(received)
                     gottencell = pickle.loads(received_data)
-                    if(gottencell.type == gottencell._Types.AddCon): #is a request for forwarding.
+                    if(gottencell.type == gottencell._Types[0]): #is a request for forwarding.
                         derived_key = clientWhoSent.key  # take his derived key
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(gottencell.IV), backend=default_backend())
                         decryptor = cipher.decryptor()

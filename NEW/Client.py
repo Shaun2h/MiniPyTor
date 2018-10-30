@@ -18,20 +18,20 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 class cell():
-    _Types = enum.Enum("Cells", "AddCon Req Resp")
+    _Types = ["AddCon", "Req", "Resp"]
 
     def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None):
         if (isconnection):
-            self.type = self._Types.AddCon  # is a connection request. so essentially some key is being pushed out here.
+            self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
         else:
             if (isreq):
-                self.type = self._Types.Req  # is a request.
+                self.type = self._Types[1]  # is a request.
             else:
-                self.type = self._Types.Resp
-        if (self.type == self._Types.Req):
+                self.type = self._Types[2]
+        if (self.type == self._Types[1]):
             self.payload = payload
         else:  # is a connection request or response...
-            if (self.type == self._Types.Resp):  # is a response. Requires a signature.
+            if (self.type == self._Types[2]):  # is a response. Requires a signature.
                 self.signature = signature
             self.payload = payload  # in this case, it should contain some public key in byte form.
             self.IV = IV  # save the IV since it's a connection cell.
@@ -86,7 +86,7 @@ class Client():
         #you should already HAVE their public key.
         try:
             sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
-            sock.connect((gonnect, gonnectport))
+            sock.connect((gonnect,gonnectport))
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
             encryptedCell = theirRSApublic.encrypt(pickle.dumps(sendingCell),padding.OAEP(mgf = padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
@@ -181,9 +181,12 @@ while(True):
     if(target in funcs.keys()):
         if(target=="a"):
             listofstuff[1]=int(listofstuff[1])
+            print(listofstuff[0])
+            print(listofstuff[1])
+            print(listofstuff[2])
             listofstuff[2]=int(listofstuff[2])
             tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
-            publickey = serialization.load_pem_public_key(tempopen.read(), password=None,backend=default_backend())  # used for signing, etc.
+            publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
             funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..
 
 
@@ -250,4 +253,4 @@ while(True):
                 ##socket3.send(thirddata+iv3) #send data
                 ##socket3.recv(4096) #get info
 """
-
+"192.168.1.116 45000 0"

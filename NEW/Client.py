@@ -99,12 +99,8 @@ class Client():
             theircell= sock.recv(4096)
             theircell = pickle.loads(theircell) #load up their cell
             signature = theircell.signature #this cell isn't encrypted. Extract the signature to verify
-            print(theircell.salt)
-            theircell.signature = None
-            print(signature)
-            print(theircell.signature)
             try:
-                theirRSApublic.verify(signature,pickle.dumps(theircell),
+                theirRSApublic.verify(signature,theircell.salt,
                                       cryptography.hazmat.primitives.asymmetric.padding.PSS(
                                           mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
                                           salt_length = cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),hashes.SHA256())

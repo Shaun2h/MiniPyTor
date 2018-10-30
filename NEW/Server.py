@@ -239,6 +239,6 @@ class Server():
 
 
 portnumber = input("give portnum pls\n")
-server = Server(portnumber,0)
+server = Server(int(portnumber),0)
 while True:
     server.main()

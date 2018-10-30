@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import enum
+import cryptography.hazmat.primitives.asymmetric.padding
 from struct import *
 from random import randint
 import pickle
@@ -84,7 +85,7 @@ class Server():
 
 
     def decrypt(self,thing):  # thing that is in RSA encryption must be decrypted before continuing.
-        self.TRUEprivate_key.decrypt(thing, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),algorithm=hashes.SHA256(), label=None))
+        self.TRUEprivate_key.decrypt(thing,cryptography.hazmat.primitives.asymmetric.padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),algorithm=hashes.SHA256(), label=None))
 
     def main(self):
         clientclass = None  # initialise as none.

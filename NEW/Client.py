@@ -7,6 +7,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidSignature
+import cryptography.hazmat.primitives.asymmetric.padding
 import threading #for testing purposes.
 import os
 import netifaces
@@ -89,7 +90,7 @@ class Client():
             sock.connect((gonnect,gonnectport))
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
-            encryptedCell = theirRSApublic.encrypt(pickle.dumps(sendingCell),padding.OAEP(mgf = padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
+            encryptedCell = theirRSApublic.encrypt(pickle.dumps(sendingCell),cryptography.hazmat.primitives.asymmetric.padding.OAEP(mgf = padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
 
 
             sock.send(encryptedCell)  # send my public key... tcp style

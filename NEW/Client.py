@@ -125,7 +125,7 @@ class Client():
                 print("Something went wrong.. Signature was invalid.")
                 return None
 
-        except error:
+        except (error ,ConnectionResetError)as e:
             print("disconnected or server is not online/ connection was refused.")
 
     def moreConnect(self,gonnect,gonnectport,list_of_Servers_between,theirRSA):

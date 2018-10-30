@@ -121,7 +121,7 @@ class Server():
                     self.CLIENTSOCKS.append(clientsocket)
                     print("Connected to ONE client.")
 
-                except error: #error is socket error here.
+                except (error,ConnectionResetError )as e: #error is socket error here.
                     if (clientclass != None):
                         self.CLIENTS.remove(clientclass)
                         # just in case.
@@ -134,7 +134,7 @@ class Server():
                     for k in self.CLIENTS:
                         if (k.socket == i):
                             clientWhoSent = k
-                except error:
+                except (error,ConnectionResetError )as e:
                     continue
                 if (len(received) == 0):
                     print("CLIENT WAS CLOSED!")

@@ -87,7 +87,10 @@ class Server():
         derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salty, info=None, backend=default_backend()).derive(shared_key)
         reply_cell = cell(True,False,serialised_public_key,salt = salty)
 
-        signature = self.TRUEprivate_key.sign(reply_cell, padding.PSS(mgf=padding.MGF1(hashes.SHA256()),salt_length=padding.PSS.MAX_LENGTH),hashes.SHA256())
+        signature = self.TRUEprivate_key.sign(reply_cell,
+                                              cryptography.hazmat.primitives.asymmetric.padding.PSS(
+                                                  mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
+                                                  salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),hashes.SHA256())
         reply_cell.signature = signature #assign the signature.
 
         clientsocket.send(pickle.dumps(reply_cell))  # send them the serialised version.

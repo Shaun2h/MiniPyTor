@@ -102,7 +102,10 @@ class Client():
             theircell.signature = None
 
             try:
-                theirRSApublic.verify(signature,theircell,padding.PSS(mgf = padding.MGF1(hashes.SHA256()),salt_length = padding.PSS.MAX_LENGTH),hashes.SHA256())
+                theirRSApublic.verify(signature,theircell,
+                                      cryptography.hazmat.primitives.asymmetric.padding.PSS(
+                                          mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
+                                          salt_length = cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),hashes.SHA256())
                 #verify that the cell was signed using their key.
                 theirKey = serialization.load_pem_public_key(theircell.payload,backend=default_backend())  # load up their key.
 
@@ -150,8 +153,6 @@ class Client():
             theircell = sock.recv(4096) # await answer
             #you now receive a cell with encrypted payload.
             theircell = pickle.loads(theircell)
-            signature = theircell.signature  # this cell isn't encrypted. Extract the signature to verify
-            theircell.signature = None
             counter =len(list_of_Servers_between)-1
 
             while(counter>=0):
@@ -161,6 +162,13 @@ class Client():
                 decrypted = decryptor.finalize() #finalise decryption
                 theircell = pickle.loads(decrypted)
                 counter-=1
+            signature = theircell.signature  # this cell isn't encrypted. Extract the signature to verify
+            theircell.signature = None
+            ###SIG VERIFY HERE
+            ###
+            ###
+            ###
+
             # at this point, you have the cell that is the public key of your target server. Additionally, salt too..
             theirKey = serialization.load_pem_public_key(theircell.payload,backend=default_backend())  # load up their key.
             shared_key = self.private_key.exchange(ec.ECDH(), theirKey)

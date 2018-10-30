@@ -107,7 +107,7 @@ class Client():
                 #verify that the cell was signed using their key.
                 theirKey = serialization.load_pem_public_key(theircell.payload,backend=default_backend())  # load up their key.
 
-                shared_key = self.private_key.exchange(ec.ECDH(), theirKey)
+                shared_key = ECprivate_key.exchange(ec.ECDH(), theirKey)
                 derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=theircell.salt, info=None,backend=default_backend()).derive(shared_key)
                 #cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend()) #256 bit length cipher lel
                 #encryptor = cipher.encryptor()
@@ -118,7 +118,8 @@ class Client():
                 #Connection is established at this point.
 
                 print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
-                return Server(gonnect, sock, derived_key, ECprivate_key,theirRSApublic,gonnectport)  # a server item is created.
+                self.serverList.append(Server(gonnect, sock, derived_key, ECprivate_key,theirRSApublic,gonnectport))
+                return   # a server item is created.
 
             except InvalidSignature:
                 print("Something went wrong.. Signature was invalid.")

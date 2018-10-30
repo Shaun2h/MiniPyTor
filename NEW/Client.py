@@ -90,19 +90,21 @@ class Client():
             sock.connect((gonnect,gonnectport))
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
-            readiedcell = self.padder128(pickle.dumps(sendingCell))
+            readiedcell = self.padder128(pickle.dumps(sendingCell,protocol=pickle.DEFAULT_PROTOCOL))
             encryptedCell = theirRSApublic.encrypt(readiedcell,cryptography.hazmat.primitives.asymmetric.padding.OAEP(
                 mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
 
 
             sock.send(encryptedCell)  # send my public key... tcp style
             theircell= sock.recv(4096)
-            theircell = pickle.loads(theircell) #load up their cell
+            theircell = pickle.loads(theircell,protocol=pickle.DEFAULT_PROTOCOL) #load up their cell
             signature = theircell.signature #this cell isn't encrypted. Extract the signature to verify
+            print(theircell.salt)
             theircell.signature = None
-
+            print(signature)
+            print(theircell.signature)
             try:
-                theirRSApublic.verify(signature,theircell,
+                theirRSApublic.verify(signature,pickle.dumps(theircell,protocol=pickle.DEFAULT_PROTOCOL),
                                       cryptography.hazmat.primitives.asymmetric.padding.PSS(
                                           mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
                                           salt_length = cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),hashes.SHA256())

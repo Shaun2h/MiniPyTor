@@ -61,7 +61,17 @@ class Server():
         self.serversocket.bind(("", portnumber))  # better be "" or it'll listen only on localhost
         self.serversocket.listen(100)
 
+    def padder256(self, data):
+        padder1b = padding.PKCS7(256).padder()  # pad ip to 256 bits... because this can vary too...
+        p1b = padder1b.update(data)
+        p1b += padder1b.finalize()
+        return p1b
 
+    def padder128(self, data):
+        padder1b = padding.PKCS7(128).padder()  # pad ip to 256 bits... because this can vary too...
+        p1b = padder1b.update(data)
+        p1b += padder1b.finalize()
+        return p1b
 
     def ExchangeKeys(self,clientsocket,obtainedCell):
         # Exchange Key with someone, obtaining a shared secret. Also, generate salt

@@ -73,13 +73,13 @@ class Client():
 
     def padder256(self,data):
         padder1b = padding.PKCS7(256).padder()  # pad ip to 256 bits... because this can vary too...
-        p1b = padder1b.update(str.encode(data))
+        p1b = padder1b.update(data)
         p1b += padder1b.finalize()
         return p1b
 
     def padder128(self,data):
         padder1b = padding.PKCS7(128).padder()  # pad ip to 256 bits... because this can vary too...
-        p1b = padder1b.update(str.encode(data))
+        p1b = padder1b.update(data)
         p1b += padder1b.finalize()
         return p1b
 
@@ -90,7 +90,8 @@ class Client():
             sock.connect((gonnect,gonnectport))
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
-            encryptedCell = theirRSApublic.encrypt(pickle.dumps(sendingCell),cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            readiedcell = self.padder128(pickle.dumps(sendingCell))
+            encryptedCell = theirRSApublic.encrypt(readiedcell,cryptography.hazmat.primitives.asymmetric.padding.OAEP(
                 mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
 
 

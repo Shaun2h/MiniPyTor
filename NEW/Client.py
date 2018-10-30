@@ -90,7 +90,8 @@ class Client():
             sock.connect((gonnect,gonnectport))
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
-            encryptedCell = theirRSApublic.encrypt(pickle.dumps(sendingCell),cryptography.hazmat.primitives.asymmetric.padding.OAEP(mgf = padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
+            encryptedCell = theirRSApublic.encrypt(pickle.dumps(sendingCell),cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+                mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
 
 
             sock.send(encryptedCell)  # send my public key... tcp style

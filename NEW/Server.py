@@ -87,13 +87,13 @@ class Server():
         derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salty, info=None, backend=default_backend()).derive(shared_key)
         reply_cell = cell(True,False,serialised_public_key,salt = salty)
 
-        signature = self.TRUEprivate_key.sign(pickle.dumps(reply_cell,protocol=pickle.DEFAULT_PROTOCOL),
+        signature = self.TRUEprivate_key.sign(pickle.dumps(reply_cell),
                                               cryptography.hazmat.primitives.asymmetric.padding.PSS(
                                                   mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
                                                   salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),hashes.SHA256())
         reply_cell.signature = signature #assign the signature.
 
-        clientsocket.send(pickle.dumps(reply_cell,protocol=pickle.DEFAULT_PROTOCOL))  # send them the serialised version.
+        clientsocket.send(pickle.dumps(reply_cell))  # send them the serialised version.
         return private_key,derived_key
 
 
@@ -112,7 +112,7 @@ class Server():
                 try:
                     obtainedCell = clientsocket.recv(4096)  # obtain their public key
                     obtainedCell = self.decrypt(obtainedCell) #decrypt the item.
-                    obtainedCell = pickle.loads(obtainedCell,protocol=pickle.DEFAULT_PROTOCOL) # i.e grab the cell that was passed forward.
+                    obtainedCell = pickle.loads(obtainedCell) # i.e grab the cell that was passed forward.
                     if(obtainedCell.type != obtainedCell._Types[0]):
                         break # it was not a connection request.
                     generatedPrivateKey,derivedkey= self.ExchangeKeys(clientsocket,obtainedCell) #obtain the generated public key, and the derived key.
@@ -143,7 +143,7 @@ class Server():
                     self.CLIENTS.remove(clientWhoSent)
                 else:
                     received_data = self.decrypt(received)
-                    gottencell = pickle.loads(received_data,protocol=pickle.DEFAULT_PROTOCOL)
+                    gottencell = pickle.loads(received_data)
                     if(gottencell.type == gottencell._Types[0]): #is a request for forwarding.
                         derived_key = clientWhoSent.key  # take his derived key
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(gottencell.IV), backend=default_backend())

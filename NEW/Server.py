@@ -87,7 +87,7 @@ class Server():
         derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salty, info=None, backend=default_backend()).derive(shared_key)
         reply_cell = cell(True,False,serialised_public_key,salt = salty)
 
-        signature = self.TRUEprivate_key.sign(reply_cell,
+        signature = self.TRUEprivate_key.sign(pickle.dumps(reply_cell),
                                               cryptography.hazmat.primitives.asymmetric.padding.PSS(
                                                   mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
                                                   salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),hashes.SHA256())

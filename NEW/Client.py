@@ -11,11 +11,10 @@ import threading #for testing purposes.
 import os
 import netifaces
 import pickle
-from .cell import cell
+from NEW.cell import cell
 from struct import *
 from random import shuffle
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
 
 class Server():
     def __init__(self,ip,socket,derivedkey,ec_key,theirRSA,port):
@@ -149,6 +148,21 @@ class Client():
 
     def req(self,typeofreq,request): #send out stuff in router.
         pass
+
+me = Client()
+funcs={"a":me.firstConnect} #add more methods here.
+while(True):
+    target = input(" 'a' for adding more connections. arguments are: '<IP> <PORT> <IDENTITY>'\n")
+    arguments = input("okay. Now tell me what you want to use as an argument if any. else just press enter.\n")
+    listofstuff = arguments.split()
+    if(target in funcs.keys()):
+        if(target=="a"):
+            listofstuff[1]=int(listofstuff[1])
+            listofstuff[2]=int(listofstuff[2])
+            tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
+            publickey = serialization.load_pem_public_key(tempopen.read(), password=None,backend=default_backend())  # used for signing, etc.
+            funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..
+
 
     # signature = self.private_key.sign(self.serialised_public_key,ec.ECDSA(hashes.SHA256()))  # sign with private key
     # theirkey.verify(theirsignature, theirkey, ec.ECDSA(hashes.SHA256()))

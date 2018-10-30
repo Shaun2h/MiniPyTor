@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import requests
-from .cell import cell
+from NEW.cell import cell
 from struct import *
 from random import randint
 import pickle
@@ -30,12 +30,13 @@ class Server():
     CLIENTS = []
     CLIENTSOCKS = []
 
-    def __init__(self):
-        self.TRUEprivate_key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048) #used for signing, etc.
+    def __init__(self,portnumber,identity):
+        tempopen =open("privates/privatetest"+str(identity)+".pem","rb")
+        self.TRUEprivate_key =serialization.load_pem_private_key(tempopen.read(), password=None, backend=default_backend())#used for signing, etc.
         self.sendingpublickey = self.TRUEprivate_key.public_key()  # public key for sending out.
         self.serversocket = socket(AF_INET, SOCK_STREAM)  # tcp type chosen for first.
         #now you have a signature of your own damned public key.
-        self.serversocket.bind(("", 45000))  # better be "" or it'll listen only on localhost
+        self.serversocket.bind(("", portnumber))  # better be "" or it'll listen only on localhost
         self.serversocket.listen(100)
 
 
@@ -203,3 +204,8 @@ class Server():
                         # no other padding is required.
                         # DO SOMETHING WITH THE DATA
 
+
+portnumber = input("give portnum pls\n")
+server = Server(portnumber,0)
+while True:
+    server.main()

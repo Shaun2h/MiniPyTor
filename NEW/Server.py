@@ -130,36 +130,37 @@ class Server():
 
             else:  # came from an existing client.
                 try:
-                    received = i.recv(4096)
                     for k in self.CLIENTS:
                         if (k.socket == i):
                             clientWhoSent = k
-                except (error,ConnectionResetError )as e:
-                    continue
-                if (len(received) == 0):
+                    received = i.recv(4096)
+                    print(received)
+                except (error, ConnectionResetError )as e:
+
                     print("CLIENT WAS CLOSED!")
 
                     self.CLIENTSOCKS.remove(i)
                     self.CLIENTS.remove(clientWhoSent)
+                    continue
+
+                received_data = self.decrypt(received)
+                gottencell = pickle.loads(received_data)
+                if(gottencell.type == gottencell._Types[0]): #is a request for forwarding.
+                    derived_key = clientWhoSent.key  # take his derived key
+                    cipher = Cipher(algorithms.AES(derived_key), modes.CBC(gottencell.IV), backend=default_backend())
+                    decryptor = cipher.decryptor()
+                    decrypted = decryptor.update(gottencell.payload)
+                    decrypted+= decryptor.finalize()
+                    cell_to_next = pickle.loads(decrypted)
+                    sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
+                    sock.connect((cell_to_next.ip, cell_to_next.port))
+                    sock.send(decrypted)  # send over the cell
+                    theircell = sock.recv(4096)  # await answer
+
+                    pass  #i am passing on the message.
                 else:
-                    received_data = self.decrypt(received)
-                    gottencell = pickle.loads(received_data)
-                    if(gottencell.type == gottencell._Types[0]): #is a request for forwarding.
-                        derived_key = clientWhoSent.key  # take his derived key
-                        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(gottencell.IV), backend=default_backend())
-                        decryptor = cipher.decryptor()
-                        decrypted = decryptor.update(gottencell.payload)
-                        decrypted+= decryptor.finalize()
-                        cell_to_next = pickle.loads(decrypted)
-                        sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
-                        sock.connect((cell_to_next.ip, cell_to_next.port))
-                        sock.send(decrypted)  # send over the cell
-                        theircell = sock.recv(4096)  # await answer
 
-                        pass  #i am passing on the message.
-                    else:
-
-                        pass #i am the last hop. the requester.
+                    pass #i am the last hop. the requester.
 
 
 

@@ -195,6 +195,7 @@ while(True):
             print(listofstuff[1])
             print(listofstuff[2])
             listofstuff[2]=int(listofstuff[2])
+            listofstuff[0] = gethostbyname(gethostname())
             tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
             publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
             funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..

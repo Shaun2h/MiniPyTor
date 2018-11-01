@@ -16,9 +16,9 @@ import os
 import select
 
 class cell():
-    _Types = ["AddCon", "Req", "Resp"]
+    _Types = ["AddCon", "Req", "Resp", "FAILED"]
 
-    def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None):
+    def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None,Type =None):
         if (isconnection):
             self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
         else:
@@ -35,6 +35,8 @@ class cell():
             self.IV = IV  # save the IV since it's a connection cell.
             if (salt != None):
                 self.salt = salt
+        if(Type!=None):
+            self.type = self._Types[3]
 
 
 class client():
@@ -69,6 +71,18 @@ class Server():
 
     def padder128(self, data):
         padder1b = padding.PKCS7(128).padder()  # pad ip to 256 bits... because this can vary too...
+        p1b = padder1b.update(data)
+        p1b += padder1b.finalize()
+        return p1b
+
+    def unpadder128(self, data):
+        padder1b = padding.PKCS7(128).unpadder()  # pad ip to 256 bits... because this can vary too...
+        p1b = padder1b.update(data)
+        p1b += padder1b.finalize()
+        return p1b
+
+    def unpadder256(self, data):
+        padder1b = padding.PKCS7(256).unpadder()  # pad ip to 256 bits... because this can vary too...
         p1b = padder1b.update(data)
         p1b += padder1b.finalize()
         return p1b
@@ -111,10 +125,27 @@ class Server():
                 (clientsocket, address) = self.serversocket.accept()
                 try:
                     obtainedCell = clientsocket.recv(4096)  # obtain their public key
-                    obtainedCell = self.decrypt(obtainedCell) #decrypt the item.
+                    try:
+                        print("raw obtained")
+                        print(obtainedCell)
+                        obtainedCell = pickle.loads(obtainedCell)
+                        print("payload encrypted")
+                        print(obtainedCell.payload)
+                        obtainedCell = self.decrypt(obtainedCell.payload) #decrypt the item.
+
+                    except(ValueError)as e: #this is due to decryption failure.
+                        if (clientclass != None):
+                            self.CLIENTS.remove(clientclass)
+                            # just in case.
+                            # otherwise, it should continue
+                        print("rejected one connection")
+                        continue
+                    print("after decryption")
+                    print(obtainedCell)
                     obtainedCell = pickle.loads(obtainedCell) # i.e grab the cell that was passed forward.
+
                     if(obtainedCell.type != obtainedCell._Types[0]):
-                        break # it was not a connection request.
+                        break  # it was not a connection request.
                     generatedPrivateKey,derivedkey= self.ExchangeKeys(clientsocket,obtainedCell) #obtain the generated public key, and the derived key.
                     clientclass = client(clientsocket, derivedkey, generatedPrivateKey)
                     self.CLIENTS.append(clientclass)
@@ -135,6 +166,8 @@ class Server():
                             clientWhoSent = k
                     received = i.recv(4096)
                     print(received)
+                    if(len(received)==0):
+                        raise ConnectionResetError
                 except (error, ConnectionResetError )as e:
 
                     print("CLIENT WAS CLOSED!")
@@ -142,21 +175,31 @@ class Server():
                     self.CLIENTSOCKS.remove(i)
                     self.CLIENTS.remove(clientWhoSent)
                     continue
-
-                received_data = self.decrypt(received)
-                gottencell = pickle.loads(received_data)
+                print("existing")
+                # received_data = self.decrypt(received)
+                gottencell = pickle.loads(received)
+                derived_key = clientWhoSent.key  # take his derived key
+                cipher = Cipher(algorithms.AES(derived_key), modes.CBC(gottencell.IV), backend=default_backend())
+                decryptor = cipher.decryptor()
+                decrypted = decryptor.update(gottencell.payload)
+                decrypted += decryptor.finalize()
                 if(gottencell.type == gottencell._Types[0]): #is a request for forwarding.
-                    derived_key = clientWhoSent.key  # take his derived key
-                    cipher = Cipher(algorithms.AES(derived_key), modes.CBC(gottencell.IV), backend=default_backend())
-                    decryptor = cipher.decryptor()
-                    decrypted = decryptor.update(gottencell.payload)
-                    decrypted+= decryptor.finalize()
                     cell_to_next = pickle.loads(decrypted)
                     sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
                     sock.connect((cell_to_next.ip, cell_to_next.port))
+                    print((cell_to_next.ip, cell_to_next.port))
+                    print("cell to next")
+                    print(decrypted)
+                    print("payload")
+                    print(cell_to_next.payload)
                     sock.send(decrypted)  # send over the cell
                     theircell = sock.recv(4096)  # await answer
-
+                    print("got values")
+                    print(theircell)
+                    if(theircell==b""):
+                        i.send(pickle.dumps(cell(False,False,"",Type = "")))
+                    i.send(theircell)
+                    print("sent back values")
                     pass  #i am passing on the message.
                 else:
 
@@ -243,6 +286,11 @@ class Server():
 
 
 portnumber = input("give portnum pls\n")
-server = Server(int(portnumber),0)
+if(portnumber =="a"):
+    print("am 45000")
+    server = Server(45000,0)
+else:
+    print("am 45001")
+    server = Server(45001, 0)
 while True:
     server.main()

@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 class cell():
-    _Types = ["AddCon", "Req", "Resp"]
+    _Types = ["AddCon", "Req", "Resp", "FAILED"]
 
     def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None):
         if (isconnection):
@@ -83,6 +83,18 @@ class Client():
         p1b += padder1b.finalize()
         return p1b
 
+    def unpadder128(self, data):
+        padder1b = padding.PKCS7(128).unpadder()  # pad ip to 256 bits... because this can vary too...
+        p1b = padder1b.update(data)
+        p1b += padder1b.finalize()
+        return p1b
+
+    def unpadder256(self, data):
+        padder1b = padding.PKCS7(256).unpadder()  # pad ip to 256 bits... because this can vary too...
+        p1b = padder1b.update(data)
+        p1b += padder1b.finalize()
+        return p1b
+
     def firstConnect(self,gonnect,gonnectport,theirRSApublic):
         #you should already HAVE their public key.
         try:
@@ -90,11 +102,14 @@ class Client():
             sock.connect((gonnect,gonnectport))
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
-            readiedcell = self.padder128(pickle.dumps(sendingCell))
+            readiedcell = pickle.dumps(sendingCell)
+            print("first connect ready cell")
+            print(readiedcell)
             encryptedCell = theirRSApublic.encrypt(readiedcell,cryptography.hazmat.primitives.asymmetric.padding.OAEP(
                 mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
-
-
+            print("first connect encrypted")
+            print(encryptedCell)
+            encryptedCell = pickle.dumps(cell(True, False, encryptedCell))
             sock.send(encryptedCell)  # send my public key... tcp style
             theircell= sock.recv(4096)
             theircell = pickle.loads(theircell) #load up their cell
@@ -133,23 +148,39 @@ class Client():
         #public key list will have to be accessed in order with list of servers.
         #number between is to know when to stop i guess.
         sendingCell, ECprivate_key = self.makeFirstConnectCell()
+        sendingCell=pickle.dumps(sendingCell)
+        print("original cell")
+        print(sendingCell)
+        sendingCell = theirRSA.encrypt(pickle.dumps(sendingCell), cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(), label=None))
+        print("encrypted cell")
+        print(sendingCell)
+        a = sendingCell
+        sendingCell = cell(True,False,sendingCell)
         sendingCell.ip = gonnect
-        sendingCell.port = gonnectport #save the stuff i should be sending over.
+        sendingCell.port = gonnectport  # save the stuff i should be sending over.
         for i in list_of_Servers_between: #continuously loop through the servers
             IV = os.urandom(16)
             cipher = Cipher(algorithms.AES(i.key), modes.CBC(IV),backend=default_backend())  # 256 bit length cipher lel
             encryptor = cipher.encryptor() #encrypt the entire cell
-            encrypted = encryptor.update(pickle.dumps(sendingCell))
+            encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
             encrypted+= encryptor.finalize() #finalise encryption.
-            sendingCell = cell(True,False,encrypted,IV)  #dump encrypted into another cell.
+            sendingCell = cell(True, False, encrypted, IV)
             sendingCell.ip = i.ip  # update the port and IP into the outer layer.
             sendingCell.port = i.port
-        final_sendingCell = pickle.dumps(sendingCell)
+
+
         try:
-            sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
-            sock.connect((sendingCell.ip, sendingCell.port))
-            sock.send(final_sendingCell)  # send over the cell
+            sock = list_of_Servers_between[0].socket
+            print("WHAT WAS SENT")
+            print(pickle.dumps(sendingCell))
+            sock.send(pickle.dumps(sendingCell) ) # send over the cell
             theircell = sock.recv(4096) # await answer
+            theircell = pickle.loads(theircell)
+            if (theircell.type == theircell._Types[3]):
+                print("FAILED!")
+                return
             #you now receive a cell with encrypted payload.
             theircell = pickle.loads(theircell)
             counter =len(list_of_Servers_between)-1
@@ -158,7 +189,7 @@ class Client():
                 cipher = Cipher(algorithms.AES(list_of_Servers_between[counter].key),modes.CBC(theircell.IV),backend=default_backend())
                 decryptor = cipher.decryptor()
                 decrypted = decryptor.update(theircell.payload)
-                decrypted = decryptor.finalize() #finalise decryption
+                decrypted += decryptor.finalize() #finalise decryption
                 theircell = pickle.loads(decrypted)
                 counter-=1
             signature = theircell.signature  # this cell isn't encrypted. Extract the signature to verify
@@ -183,7 +214,15 @@ class Client():
         pass
 
 me = Client()
-funcs={"a":me.firstConnect} #add more methods here.
+funcs={"a":me.firstConnect, "b": me.moreConnect} #add more methods here.
+tempopen = open("publics/publictest" + "0"+ ".pem", "rb")
+publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
+tempopen.close()
+me.firstConnect(gethostbyname(gethostname()), 45000,publickey)
+tempopen = open("publics/publictest" + "1"+ ".pem", "rb")
+#publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
+tempopen.close()
+me.moreConnect(gethostbyname(gethostname()),45001,me.serverList,publickey)
 while(True):
     target = input(" 'a' for adding more connections. arguments are: '<IP> <PORT> <IDENTITY>'\n")
     arguments = input("okay. Now tell me what you want to use as an argument if any. else just press enter.\n")
@@ -195,10 +234,22 @@ while(True):
             print(listofstuff[1])
             print(listofstuff[2])
             listofstuff[2]=int(listofstuff[2])
-            listofstuff[0] = gethostbyname(gethostname())
+            #listofstuff[0] = gethostbyname(gethostname())
             tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
             publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
             funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..
+            tempopen.close()
+        if (target == "b"):
+            listofstuff[1] = int(listofstuff[1])
+            print(listofstuff[0])
+            print(listofstuff[1])
+            print(listofstuff[2])
+            listofstuff[2] = int(listofstuff[2])
+            listofstuff[0] = gethostbyname(gethostname())
+            tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
+            publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                          backend=default_backend())  # used for signing, etc.
+            funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
 
 
     # signature = self.private_key.sign(self.serialised_public_key,ec.ECDSA(hashes.SHA256()))  # sign with private key

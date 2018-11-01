@@ -112,8 +112,8 @@ class Server():
 
 
     def decrypt(self,thing):  # thing that is in RSA encryption must be decrypted before continuing.
-        return self.TRUEprivate_key.decrypt(thing,cryptography.hazmat.primitives.asymmetric.padding.OAEP(
-            mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm=hashes.SHA256(), label=None))
+        return self.TRUEprivate_key.decrypt(thing,cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15())#cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            #mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm=hashes.SHA256(), label=None))
 
     def main(self):
         clientclass = None  # initialise as none.
@@ -126,10 +126,10 @@ class Server():
                 try:
                     obtainedCell = clientsocket.recv(4096)  # obtain their public key
                     try:
-                        print("raw obtained")
+                        print("raw data obtained. (Cell)")
                         print(obtainedCell)
                         obtainedCell = pickle.loads(obtainedCell)
-                        print("payload encrypted")
+                        print("encrypted payload within cell")
                         print(obtainedCell.payload)
                         obtainedCell = self.decrypt(obtainedCell.payload) #decrypt the item.
 
@@ -140,7 +140,7 @@ class Server():
                             # otherwise, it should continue
                         print("rejected one connection")
                         continue
-                    print("after decryption")
+                    print("decrypted cell with actual keys.")
                     print(obtainedCell)
                     obtainedCell = pickle.loads(obtainedCell) # i.e grab the cell that was passed forward.
 

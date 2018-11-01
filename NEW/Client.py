@@ -103,11 +103,11 @@ class Client():
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
             readiedcell = pickle.dumps(sendingCell)
-            print("first connect ready cell")
+            print("first connect Actual cell (encrypted bytes) ")
             print(readiedcell)
-            encryptedCell = theirRSApublic.encrypt(readiedcell,cryptography.hazmat.primitives.asymmetric.padding.OAEP(
-                mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
-            print("first connect encrypted")
+            encryptedCell = theirRSApublic.encrypt(readiedcell,cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15())#cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+                #mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
+            print("first connect Actual cell(decrypted bytes)")
             print(encryptedCell)
             encryptedCell = pickle.dumps(cell(True, False, encryptedCell))
             sock.send(encryptedCell)  # send my public key... tcp style
@@ -149,12 +149,12 @@ class Client():
         #number between is to know when to stop i guess.
         sendingCell, ECprivate_key = self.makeFirstConnectCell()
         sendingCell=pickle.dumps(sendingCell)
-        print("original cell")
+        print("Innermost cell with keys")
         print(sendingCell)
-        sendingCell = theirRSA.encrypt(pickle.dumps(sendingCell), cryptography.hazmat.primitives.asymmetric.padding.OAEP(
-            mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(), label=None))
-        print("encrypted cell")
+        sendingCell = theirRSA.encrypt(pickle.dumps(sendingCell),cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15())# cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            #mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),
+            #algorithm=hashes.SHA256(), label=None))
+        print("Innermost cell with keys (Encrypted)")
         print(sendingCell)
         a = sendingCell
         sendingCell = cell(True,False,sendingCell)
@@ -173,13 +173,11 @@ class Client():
 
         try:
             sock = list_of_Servers_between[0].socket
-            print("WHAT WAS SENT")
-            print(pickle.dumps(sendingCell))
             sock.send(pickle.dumps(sendingCell) ) # send over the cell
             theircell = sock.recv(4096) # await answer
             theircell = pickle.loads(theircell)
             if (theircell.type == theircell._Types[3]):
-                print("FAILED!")
+                print("FAILED AT CONNECTION!")
                 return
             #you now receive a cell with encrypted payload.
             theircell = pickle.loads(theircell)

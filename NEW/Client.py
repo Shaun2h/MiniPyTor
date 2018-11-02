@@ -369,7 +369,9 @@ class Client():
 
 
 me = Client()
-funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2} #add more methods here.
+funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d":me.req} #add more methods here.
+"""
+
 tempopen = open("publics/publictest" + "0"+ ".pem", "rb")
 publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
 tempopen.close()
@@ -385,19 +387,26 @@ publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_ba
 tempopen.close()
 print("\n\n\n\n")
 me.moreConnect2(gethostbyname(gethostname()),45002,me.serverList,publickey)
-me.req("some ting wong","not racist cuz i'm chinese.",me.serverList)
+me.req("test req type","test req",me.serverList)
+"""
 while(True):
-    target = input(" 'a' for adding more connections. arguments are: '<IP> <PORT> <IDENTITY>'\n")
-    arguments = input("okay. Now tell me what you want to use as an argument if any. else just press enter.\n")
+    target = input(" 'a' for adding first connection. arguments are: '<IP> <PORT> <IDENTITY>'\n"+
+                   " 'b' for adding second connection. arguments are: '<IP> <PORT> <IDENTITY>'\n"+
+                   " 'c' for adding third connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
+                   " 'd' for adding testing the connection to the last node. arguments are: '<type of request>, <request>'\n"
+                   " If you want localhost, type 'LOCAL' \n"
+                   )
+    arguments = input("Now tell me what you want to use as an argument if any. split by spaces. else just press enter.\n")
     listofstuff = arguments.split()
     if(target in funcs.keys()):
+        if (listofstuff[0] == "LOCAL"):
+            listofstuff[0] = gethostbyname(gethostname())
         if(target=="a"):
             listofstuff[1]=int(listofstuff[1])
             print(listofstuff[0])
             print(listofstuff[1])
             print(listofstuff[2])
             listofstuff[2]=int(listofstuff[2])
-            #listofstuff[0] = gethostbyname(gethostname())
             tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
             publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
             funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..
@@ -408,11 +417,22 @@ while(True):
             print(listofstuff[1])
             print(listofstuff[2])
             listofstuff[2] = int(listofstuff[2])
-            listofstuff[0] = gethostbyname(gethostname())
             tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
             publickey = serialization.load_pem_public_key(tempopen.read(),
                                                           backend=default_backend())  # used for signing, etc.
             funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
+        if (target == "c"):
+            listofstuff[1] = int(listofstuff[1])
+            print(listofstuff[0])
+            print(listofstuff[1])
+            print(listofstuff[2])
+            listofstuff[2] = int(listofstuff[2])
+            tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
+            publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                          backend=default_backend())  # used for signing, etc.
+            funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
+        if(target=="d"):
+            funcs[target](listofstuff[0],listofstuff[1],me.serverList) #request test
 
 
     # signature = self.private_key.sign(self.serialised_public_key,ec.ECDSA(hashes.SHA256()))  # sign with private key

@@ -337,7 +337,7 @@ class Server():
                         # DO SOMETHING WITH THE DATA
 
 
-portnumber = input("give portnum pls\n")
+portnumber = input("give portnum pls a = 45000 b = 45001 c =45002\nelse i default to 45003\n")
 if(portnumber =="a"):
     print("am 45000")
     server = Server(45000,0)
@@ -349,6 +349,9 @@ else:
         if (portnumber == "c"):
             print("am 45002")
             server = Server(45002, 2)
+        else:
+            print("am 45002")
+            server = Server(45003, 2)
 
 while True:
     server.main()

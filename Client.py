@@ -8,14 +8,9 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidSignature
 import cryptography.hazmat.primitives.asymmetric.padding
-import requests
-import threading #for testing purposes.
 import os
-import netifaces
 import pickle
-import enum
 from struct import *
-from random import shuffle
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
@@ -69,10 +64,6 @@ class Client():
         self.serialised_public_key = self.public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
         #serialised RSA public key.
 
-    def Gonnection(self,gonnect1,gonnectport1,gonnect2,gonnectport2,gonnect3,gonnectport3):
-        #begin a connection between different servers.
-        self.firstConnect(gonnect1,gonnectport1)
-
     def makeFirstConnectCell(self):
         ECprivate_key = ec.generate_private_key(ec.SECP384R1(), default_backend())  # elliptic curve
         DHpublicKeyBytes = ECprivate_key.public_key().public_bytes(encoding=serialization.Encoding.PEM,
@@ -88,18 +79,6 @@ class Client():
 
     def padder128(self,data):
         padder1b = padding.PKCS7(128).padder()  # pad ip to 256 bits... because this can vary too...
-        p1b = padder1b.update(data)
-        p1b += padder1b.finalize()
-        return p1b
-
-    def unpadder128(self, data):
-        padder1b = padding.PKCS7(128).unpadder()  # pad ip to 256 bits... because this can vary too...
-        p1b = padder1b.update(data)
-        p1b += padder1b.finalize()
-        return p1b
-
-    def unpadder256(self, data):
-        padder1b = padding.PKCS7(256).unpadder()  # pad ip to 256 bits... because this can vary too...
         p1b = padder1b.update(data)
         p1b += padder1b.finalize()
         return p1b
@@ -372,31 +351,12 @@ class Client():
 
 me = Client()
 funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d":me.req} #add more methods here.
-"""
-
-tempopen = open("publics/publictest" + "0"+ ".pem", "rb")
-publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
-tempopen.close()
-print("\n\n\n\n")
-me.firstConnect(gethostbyname(gethostname()), 45000,publickey)
-tempopen = open("publics/publictest" + "1"+ ".pem", "rb")
-publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
-tempopen.close()
-print("\n\n\n\n")
-me.moreConnect1(gethostbyname(gethostname()),45001,me.serverList,publickey)
-tempopen = open("publics/publictest" + "2"+ ".pem", "rb")
-publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
-tempopen.close()
-print("\n\n\n\n")
-me.moreConnect2(gethostbyname(gethostname()),45002,me.serverList,publickey)
-me.req("test req type","test req",me.serverList)
-"""
 while(True):
-    target = input(" 'a' for adding first connection. arguments are: '<IP> <PORT> <IDENTITY>'\n"+
-                   " 'b' for adding second connection. arguments are: '<IP> <PORT> <IDENTITY>'\n"+
+    target = input(" 'a' for adding first connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
+                   " 'b' for adding second connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
                    " 'c' for adding third connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
                    " 'd' for adding testing the connection to the last node. arguments are: '<type of request>, <request>'\n"
-                   " If you want localhost, type 'LOCAL' \n"
+                   + " If you want localhost, type 'LOCAL' \n"
                    )
     arguments = input("Now tell me what you want to use as an argument if any. split by spaces. else just press enter.\n")
     listofstuff = arguments.split()
@@ -435,3 +395,23 @@ while(True):
             funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
         if(target=="d"):
             funcs[target](listofstuff[0],listofstuff[1],me.serverList) #request test
+
+
+"""
+tempopen = open("publics/publictest" + "0"+ ".pem", "rb")
+publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
+tempopen.close()
+print("\n\n\n\n")
+me.firstConnect(gethostbyname(gethostname()), 45000,publickey)
+tempopen = open("publics/publictest" + "1"+ ".pem", "rb")
+publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
+tempopen.close()
+print("\n\n\n\n")
+me.moreConnect1(gethostbyname(gethostname()),45001,me.serverList,publickey)
+tempopen = open("publics/publictest" + "2"+ ".pem", "rb")
+publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
+tempopen.close()
+print("\n\n\n\n")
+me.moreConnect2(gethostbyname(gethostname()),45002,me.serverList,publickey)
+me.req("test req type","test req",me.serverList)
+"""

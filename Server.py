@@ -7,7 +7,6 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-import enum
 import requests
 import cryptography.hazmat.primitives.asymmetric.padding
 from struct import *
@@ -79,18 +78,6 @@ class Server():
 
     def padder128(self, data):
         padder1b = padding.PKCS7(128).padder()  # pad ip to 256 bits... because this can vary too...
-        p1b = padder1b.update(data)
-        p1b += padder1b.finalize()
-        return p1b
-
-    def unpadder128(self, data):
-        padder1b = padding.PKCS7(128).unpadder()  # pad ip to 256 bits... because this can vary too...
-        p1b = padder1b.update(data)
-        p1b += padder1b.finalize()
-        return p1b
-
-    def unpadder256(self, data):
-        padder1b = padding.PKCS7(256).unpadder()  # pad ip to 256 bits... because this can vary too...
         p1b = padder1b.update(data)
         p1b += padder1b.finalize()
         return p1b

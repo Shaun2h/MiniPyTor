@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidSignature
 import cryptography.hazmat.primitives.asymmetric.padding
+import requests
 import threading #for testing purposes.
 import os
 import netifaces
@@ -339,9 +340,10 @@ class Client():
         try:
             sock = list_of_Servers_between[0].socket
             sock.send(pickle.dumps(sendingCell))  # send over the cell
-            theircell = sock.recv(4096)  # await answer
+            theircell = sock.recv(32768)  # await answer
             # you now receive a cell with encrypted payload.
             print("received cell")
+            print(len(theircell))
             print(theircell)
             theircell = pickle.loads(theircell)
             print("received cell payload")
@@ -362,8 +364,8 @@ class Client():
                 print("FAILED AT CONNECTION!")
                 return
             # theircell = pickle.loads(theircell.payload)
-            print(theircell.payload)
-            print("questionably succeeded.")
+            print("questionably succeeded....\n\n")
+            print(pickle.loads(theircell.payload))
         except error:
             print("socketerror")
 

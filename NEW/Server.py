@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import enum
+import requests
 import cryptography.hazmat.primitives.asymmetric.padding
 from struct import *
 from random import randint
@@ -236,8 +237,9 @@ class Server():
                         print(cell_to_next.payload)
                         print(cell_to_next.type)
                         sock.send(cell_to_next.payload) # send over the cell
-                        theircell = sock.recv(4096)  # await answer
+                        theircell = sock.recv(32768)  # await answer
                         print("got answer back.. as a relay.")
+                        print(len(theircell))
                         print(theircell)
                         IV = os.urandom(16)
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
@@ -249,92 +251,28 @@ class Server():
                         print("Relay success.\n\n\n\n\n")
                 elif(cell_to_next.type == cell_to_next._Types[1]):
                     print(cell_to_next.payload)
-                    IV=os.urandom(16)
-                    cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
-                    encryptor = cipher.encryptor()
-                    encrypted = encryptor.update(self.padder128(pickle.dumps(cell(False, False,"12345"))))
-                    encrypted += encryptor.finalize()
-                    i.send(pickle.dumps(cell(True, False, encrypted, IV=IV)))
+                    if(type(cell_to_next.payload)!=type((1,)) and len(cell_to_next.payload)!=2):
+                        IV=os.urandom(16)
+                        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
+                        encryptor = cipher.encryptor()
+                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(False, False,"INVALID REQUEST DUMDUM"))))
+                        encrypted += encryptor.finalize()
+                        i.send(pickle.dumps(cell(True, False, encrypted, IV=IV)))
+                        print("INVALID REQUEST SENT BACK")
+                    else:
+                        request =cell_to_next.payload
+                        a = requests.get(request[1])
+                        print("length of answer")
+                        print(len(a.content))
+                        IV = os.urandom(16)
+                        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
+                        encryptor = cipher.encryptor()
+                        encrypted = encryptor.update(
+                            self.padder128(pickle.dumps(cell(False, False, pickle.dumps(a.content)))))
+                        encrypted += encryptor.finalize()
+                        i.send(pickle.dumps(cell(True, False, encrypted, IV=IV)))
+                        print("VALID REQUEST REPLIED.")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    """print("total received length")
-                    print(len(received))
-                    print(received)"""
-                    # iv = received[-48:-32] #before last 32 is iv
-                    # ip = received[-32:] #last 32 elements
-                    ##iv = received[-16:]  # last 16 bits are now the iv.
-                    ##everythingelse = received[:-16]
-                    ##print("length of encrypted")
-                    ##print(len(everythingelse))
-                    ##print("encrypted")
-                    ##print(everythingelse)
-                    """print("length of ip bytes (they refer to me though..)")
-                    print(len(ip))
-                    print("ip bytes (my ip, in byte form. duh.)")
-                    print(ip)"""
-                    """print("length of iv bytes")
-                    print(len(iv))
-                    print("iv bytes")
-                    print(iv)"""
-                    ##clientwhosent = None
-                    ##for k in self.CLIENTS:
-                        ##if (k.socket == i):
-                            ##clientwhosent = k
-                    ##if (clientwhosent == None):
-                        ##continue  # was a spoofed packet
-                    ##try:
-                        ##cipher = Cipher(algorithms.AES(clientwhosent.key), modes.CBC(iv), backend=default_backend())
-                        ##AESdecryptor = cipher.decryptor()
-                        ##decrypted = AESdecryptor.update(everythingelse)
-                        ##decrypted += AESdecryptor.finalize()
-                        ##unpadder = padding.PKCS7(256).unpadder()  # IP is padded to 256
-                        ##decrypted = self.TRUEprivate_key.decrypt(decrypted, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
-                        ##print("len decrypted " + str(len(decrypted)))
-                        ##print("decrypted bytes")
-                        ##print(decrypted)
-                        ##u = unpadder.update(decrypted[-32:])  # ATTEMPT TO STRIP THE IP AT THE LAST 32 BITS
-                        ##u += unpadder.finalize()
-                        ##print("I AM NOT THE LAST HOP.")
-                        ##print(str(u))
-                        ##print("length of bytes of next hop bytes " + str(len(u)))
-                        ##print("bytes of next hop")
-                        ##print(u)
-                        ##print("target of next hop")
-                        ##print(str(u))  # this is the next ip hop.
-                        # send decrypted[:-32] i.e. without the ip address. Ensure it is wrapped in a AES with the next server. don't forget to include iv.
-                        ##i.send("h")
-                        ##for k in self.CLIENTS:
-                            ##if (k.socket == i):
-                                ##clienttoremove = k
-                        ##self.CLIENTSOCKS.remove(i)
-                        ##self.CLIENTS.remove(clienttoremove)  # close the connection and kick them out.
-                        ##i.close()  # now close and leave.
-                        ##self.BounceToOtherServer(str(u), decrypted[:-32])  # without the IP Address.
-                    ##except ValueError:
-                        ##print("AM THE LAST ONE! AM THE LAST ONE!")
-                        ##IPofSender = str(decrypted)[-247:-215]
-                        ##originalPEM = str(decrypted)[-215:]
-                        ##print("requesting" + str(decrypted)[:-32])
-                        ##sendback = requests.get(decrypted)  # obtained the data
-                        ##originalpublickey = serialization.load_pem_public_key(IPofSender, password=None,backend=default_backend())  # load pem public key here.
-                        # now do the same thing as a client and select 3 things to send...
-                        # no other padding is required.
-                        # DO SOMETHING WITH THE DATA
 
 
 portnumber = input("give portnum pls a = 45000 b = 45001 c =45002\nelse i default to 45003\n")

@@ -1,4 +1,5 @@
 from socket import *
+import time
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import padding
@@ -15,35 +16,28 @@ import pickle
 import os
 import select
 
+
 class cell():
     _Types = ["AddCon", "Req", "ConnectResp", "FAILED", "relay connect","relay"]
 
-    def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None, Type =None):
-        if (isconnection):
-            self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
-        else:
-            if (isreq):
-                self.type = self._Types[1]  # is a request.
-            else: #is connec , is NOT a request
-                self.type = self._Types[2] #is a response to a connection
-
-        if (self.type == self._Types[1]):
-            self.payload = payload
-        else:  # is a connection request or response...
-            if (self.type == self._Types[2]):  # is a response. Requires a signature.
-                self.signature = signature
-            self.payload = payload  # in this case, it should contain some public key in byte form.
-            self.IV = IV  # save the IV since it's a connection cell.
-            if (salt != None):
-                self.salt = salt
+    def __init__(self, payload, IV=None, salt=None, signature=None, Type =None):
+        self.payload = payload
+        self.signature = signature
+        self.IV = IV  # save the IV since it's a connection cell.
+        self.salt = salt
         if (Type != None):
             if (Type == "failed"):
                 self.type = self._Types[3]  # indicates failure
+            elif(Type =="relay connect"):
+                self.type = self._Types[4]  # indicates to make a connection to a new server.
+            elif (Type == "AddCon"):
+                self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
+            elif (Type == "Req"):
+                self.type = self._Types[1]  # is a plain request. so essentially some key is being pushed out here.
+            elif (Type == "ConnectResp"):
+                self.type = self._Types[2]  #is a response to a connection
             else:
-                if(Type =="relay connect"):
-                    self.type = self._Types[4]  # indicates to make a connection to a new server.
-                else:
-                    self.type = self._Types[5] #indicates relay
+                self.type = self._Types[5] #indicates relay
 
 
 class client():
@@ -94,7 +88,7 @@ class Server():
         shared_key = private_key.exchange(ec.ECDH(), theirkey)
         salty = str.encode(str(randint(0, 99999999)))  # randomised IV
         derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salty, info=None, backend=default_backend()).derive(shared_key)
-        reply_cell = cell(False,False,serialised_public_key,salt = salty)
+        reply_cell = cell(serialised_public_key,salt = salty,Type="ConnectResp")
         signature = self.TRUEprivate_key.sign(salty,
                                               cryptography.hazmat.primitives.asymmetric.padding.PSS(
                                                   mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
@@ -136,7 +130,7 @@ class Server():
                     obtainedCell = pickle.loads(obtainedCell) # i.e grab the cell that was passed forward.
                     print("after pickle load")
                     print(obtainedCell)
-                    if(obtainedCell.type != obtainedCell._Types[0]):
+                    if(obtainedCell.type != "AddCon"):
                         break  # it was not a connection request.
                     generatedPrivateKey,derivedkey= self.ExchangeKeys(clientsocket,obtainedCell) #obtain the generated public key, and the derived key.
                     clientclass = client(clientsocket, derivedkey, generatedPrivateKey)
@@ -182,7 +176,7 @@ class Server():
                 decrypted += decryptor.finalize()
                 cell_to_next = pickle.loads(decrypted)
                 print(cell_to_next.type)
-                if(cell_to_next.type == cell_to_next._Types[4]): #is a request for a relay connect
+                if(cell_to_next.type == "relay connect"): #is a request for a relay connect
                     sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
                     sock.connect((cell_to_next.ip, cell_to_next.port))
                     print((cell_to_next.ip, cell_to_next.port))
@@ -198,22 +192,22 @@ class Server():
                     cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
                     encryptor = cipher.encryptor()
                     if(theircell==b""):
-                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(False,False,"",Type = "failed"))))
+                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell("",Type = "failed"))))
                         encrypted += encryptor.finalize()
                         print("sent failed")
-                        i.send(pickle.dumps(cell(False, False, encrypted, IV=IV, Type="failed")))
+                        i.send(pickle.dumps(cell(encrypted, IV=IV, Type="failed")))
                     else:
-                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(False,False,theircell))))
+                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(theircell,Type = "ConnectResp"))))
                         encrypted += encryptor.finalize()
                         print("sent valid response")
-                        i.send(pickle.dumps(cell(True,False,encrypted,IV=IV)))
+                        i.send(pickle.dumps(cell(encrypted,IV=IV,Type = "AddCon")))
                         clientWhoSent.bounceIP = cell_to_next.ip
                         clientWhoSent.bouncePORT = cell_to_next.port
                         clientWhoSent.bounceSocket = sock
                         print("connection success.\n\n\n\n\n")
 
                     pass  #i am passing on the message.
-                elif (cell_to_next.type == cell_to_next._Types[5]):  # is an item to be relayed.
+                elif (cell_to_next.type =="relay"):  # is an item to be relayed.
                     if(clientWhoSent.bounceSocket==None): #check if there is bounce socket
                         return
                     else:
@@ -232,32 +226,32 @@ class Server():
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
                         encryptor = cipher.encryptor()
                         encrypted = encryptor.update(
-                            self.padder128(pickle.dumps(cell(False, False, theircell))))
+                            self.padder128(pickle.dumps(cell(theircell, Type = "ConnectResp"))))
                         encrypted += encryptor.finalize()
-                        i.send(pickle.dumps(cell(True, False, encrypted, IV=IV)))
+                        i.send(pickle.dumps(cell(encrypted, IV=IV, Type = "AddCon")))
                         print("Relay success.\n\n\n\n\n")
-                elif(cell_to_next.type == cell_to_next._Types[1]):
+                elif(cell_to_next.type == "Req"):
                     print(cell_to_next.payload)
-                    if(type(cell_to_next.payload)!=type((1,)) and len(cell_to_next.payload)!=2):
+                    if(type(cell_to_next.payload)!=type("") ):
                         IV=os.urandom(16)
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
                         encryptor = cipher.encryptor()
-                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(False, False,"INVALID REQUEST DUMDUM"))))
+                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell("INVALID REQUEST DUMDUM", Type = "ConnectResp"))))
                         encrypted += encryptor.finalize()
-                        i.send(pickle.dumps(cell(True, False, encrypted, IV=IV)))
+                        i.send(pickle.dumps(cell(encrypted, IV=IV, Type = "AddCon")))
                         print("INVALID REQUEST SENT BACK")
                     else:
                         request =cell_to_next.payload
-                        a = requests.get(request[1])
+                        a = requests.get(request)
                         print("length of answer")
                         print(len(a.content))
                         IV = os.urandom(16)
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
                         encryptor = cipher.encryptor()
                         encrypted = encryptor.update(
-                            self.padder128(pickle.dumps(cell(False, False, pickle.dumps(a.content)))))
+                            self.padder128(pickle.dumps(cell(pickle.dumps(a), Type = "ConnectResp"))))
                         encrypted += encryptor.finalize()
-                        i.send(pickle.dumps(cell(True, False, encrypted, IV=IV)))
+                        i.send(pickle.dumps(cell(encrypted, IV=IV, Type = "AddCon")))
                         print("VALID REQUEST REPLIED.")
 
 

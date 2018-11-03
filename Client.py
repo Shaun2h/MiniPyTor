@@ -11,38 +11,31 @@ import cryptography.hazmat.primitives.asymmetric.padding
 import os
 import pickle
 from struct import *
+import requests
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 class cell():
-    _Types = ["AddCon", "Req", "ConnectResp", "FAILED", "relay connect", "relay"]
+    _Types = ["AddCon", "Req", "ConnectResp", "FAILED", "relay connect","relay"]
 
-    def __init__(self, isconnection, isreq, payload, IV=None, salt=None, signature=None, Type=None):
-        if (isconnection):
-            self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
-        else:
-            if (isreq):
-                self.type = self._Types[1]  # is a request.
-            else:  # is connec , is NOT a request
-                self.type = self._Types[2]  # is a response to a connection
-
-        if (self.type == self._Types[1]):
-            self.payload = payload
-        else:  # is a connection request or response...
-            if (self.type == self._Types[2]):  # is a response. Requires a signature.
-                self.signature = signature
-            self.payload = payload  # in this case, it should contain some public key in byte form.
-            self.IV = IV  # save the IV since it's a connection cell.
-            if (salt != None):
-                self.salt = salt
+    def __init__(self, payload, IV=None, salt=None, signature=None, Type =None):
+        self.payload = payload
+        self.signature = signature
+        self.IV = IV  # save the IV since it's a connection cell.
+        self.salt = salt
         if (Type != None):
             if (Type == "failed"):
                 self.type = self._Types[3]  # indicates failure
+            elif(Type =="relay connect"):
+                self.type = self._Types[4]  # indicates to make a connection to a new server.
+            elif (Type == "AddCon"):
+                self.type = self._Types[0]  # is a connection request. so essentially some key is being pushed out here.
+            elif (Type == "Req"):
+                self.type = self._Types[1]  # is a plain request. so essentially some key is being pushed out here.
+            elif (Type == "ConnectResp"):
+                self.type = self._Types[2]  #is a response to a connection
             else:
-                if(Type =="relay connect"):
-                    self.type = self._Types[4]  # indicates to make a connection to a new server.
-                else:
-                    self.type = self._Types[5] #indicates relay
+                self.type = self._Types[5] #indicates relay
 
 
 class Server():
@@ -68,7 +61,7 @@ class Client():
         ECprivate_key = ec.generate_private_key(ec.SECP384R1(), default_backend())  # elliptic curve
         DHpublicKeyBytes = ECprivate_key.public_key().public_bytes(encoding=serialization.Encoding.PEM,
                                                                    format=serialization.PublicFormat.SubjectPublicKeyInfo)
-        sendingCell = cell(True, False, DHpublicKeyBytes)  # send the initialising cell, by sending the DHpublicKeyBytes
+        sendingCell = cell(DHpublicKeyBytes, Type="AddCon")  # send the initialising cell, by sending the DHpublicKeyBytes
         return sendingCell,ECprivate_key
 
     def padder256(self,data):
@@ -145,7 +138,7 @@ class Client():
             algorithm=hashes.SHA256(), label=None))
         print("Innermost cell with keys (Encrypted)")
         print(sendingCell)
-        sendingCell = cell(True, False, sendingCell,Type="relay connect") #connection type. exit node always knows
+        sendingCell = cell(sendingCell,Type="relay connect") #connection type. exit node always knows
         sendingCell.ip = gonnect
         sendingCell.port = gonnectport  # save the stuff i should be sending over.
         IV = os.urandom(16)
@@ -154,7 +147,7 @@ class Client():
         encryptor = cipher.encryptor() #encrypt the entire cell
         encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
         encrypted+= encryptor.finalize() #finalise encryption.
-        sendingCell = cell(True, False, encrypted,IV= IV,Type="relay connect")
+        sendingCell = cell(encrypted,IV= IV,Type="relay connect")
 
 
         try:
@@ -212,7 +205,7 @@ class Client():
             algorithm=hashes.SHA256(), label=None))
         print("Innermost cell with keys (Encrypted)")
         print(sendingCell)
-        sendingCell = cell(True, False, sendingCell, Type="relay connect")  # connection type. exit node always knows
+        sendingCell = cell( sendingCell, Type="relay connect")  # connection type. exit node always knows
         sendingCell.ip = gonnect
         sendingCell.port = gonnectport  # save the stuff i should be sending over.
         IV = os.urandom(16)
@@ -221,10 +214,10 @@ class Client():
         encryptor = cipher.encryptor()  # encrypt the entire cell
         encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
         encrypted += encryptor.finalize()  # finalise encryption.
-        sendingCell = cell(True, False, encrypted, IV=IV, Type="relay connect")
+        sendingCell = cell(encrypted, IV=IV, Type="relay connect")
         sendingCell.ip = list_of_Servers_between[1].ip
         sendingCell.port = list_of_Servers_between[1].port
-        sendingCell = cell(True, False, pickle.dumps(sendingCell),Type="relay")
+        sendingCell = cell(pickle.dumps(sendingCell),Type="relay")
         IV = os.urandom(16)
 
         cipher = Cipher(algorithms.AES(list_of_Servers_between[0].key), modes.CBC(IV),
@@ -232,7 +225,7 @@ class Client():
         encryptor = cipher.encryptor()  # encrypt the entire cell
         encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
         encrypted += encryptor.finalize()  # finalise encryption.
-        sendingCell = cell(True, False, encrypted, IV=IV, Type="relay")
+        sendingCell = cell(encrypted, IV=IV, Type="relay")
         sendingCell.ip = list_of_Servers_between[0].ip
         sendingCell.port = list_of_Servers_between[0].port
         try:
@@ -278,22 +271,22 @@ class Client():
         except error:
             print("socketerror")
 
-    def req(self,typeofreq,request, list_of_Servers_between): #send out stuff in router.
+    def req(self,request, list_of_Servers_between): #send out stuff in router.
         print("REQUEST SENDING TEST")
         # must send IV and a cell that is encrypted with the next public key
         # public key list will have to be accessed in order with list of servers.
         # number between is to know when to stop i guess.
-        sendingCell = cell(False, True, (typeofreq,request))  # connection type. exit node always knows
+        sendingCell = cell( request,Type = "Req")  # connection type. exit node always knows
         IV = os.urandom(16)
         cipher = Cipher(algorithms.AES(list_of_Servers_between[2].key), modes.CBC(IV),
                         backend=default_backend())  # 256 bit length cipher lel
         encryptor = cipher.encryptor()  # encrypt the entire cell
         encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
         encrypted += encryptor.finalize()  # finalise encryption.
-        sendingCell = cell(True, False, encrypted, IV=IV, Type="relay")
+        sendingCell = cell(encrypted, IV=IV, Type="relay")
         sendingCell.ip = list_of_Servers_between[2].ip
         sendingCell.port = list_of_Servers_between[2].port
-        sendingCell = cell(True, False, pickle.dumps(sendingCell), Type="relay")
+        sendingCell = cell(pickle.dumps(sendingCell), Type="relay")
 
 
         IV = os.urandom(16)
@@ -302,10 +295,10 @@ class Client():
         encryptor = cipher.encryptor()  # encrypt the entire cell
         encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
         encrypted += encryptor.finalize()  # finalise encryption.
-        sendingCell = cell(True, False, encrypted, IV=IV, Type="relay")
+        sendingCell = cell(encrypted, IV=IV, Type="relay")
         sendingCell.ip = list_of_Servers_between[1].ip
         sendingCell.port = list_of_Servers_between[1].port
-        sendingCell = cell(True, False, pickle.dumps(sendingCell), Type="relay")
+        sendingCell = cell(pickle.dumps(sendingCell), Type="relay")
         IV = os.urandom(16)
 
         cipher = Cipher(algorithms.AES(list_of_Servers_between[0].key), modes.CBC(IV),
@@ -313,7 +306,7 @@ class Client():
         encryptor = cipher.encryptor()  # encrypt the entire cell
         encrypted = encryptor.update(self.padder128(pickle.dumps(sendingCell)))
         encrypted += encryptor.finalize()  # finalise encryption.
-        sendingCell = cell(True, False, encrypted, IV=IV, Type="relay")
+        sendingCell = cell(encrypted, IV=IV, Type="relay")
         sendingCell.ip = list_of_Servers_between[0].ip
         sendingCell.port = list_of_Servers_between[0].port
         try:
@@ -344,7 +337,9 @@ class Client():
                 return
             # theircell = pickle.loads(theircell.payload)
             print("questionably succeeded....\n\n")
-            print(pickle.loads(theircell.payload))
+            response = pickle.loads(theircell.payload)
+            print(response.content)
+            return response
         except error:
             print("socketerror")
 
@@ -394,7 +389,7 @@ while(True):
                                                           backend=default_backend())  # used for signing, etc.
             funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
         if(target=="d"):
-            funcs[target](listofstuff[0],listofstuff[1],me.serverList) #request test
+            funcs[target](listofstuff[0],me.serverList) #request test
 
 
 """

@@ -331,7 +331,7 @@ class Client():
             print (json.dumps(return_dict))
         except error:
             print("socketerror")
-
+"""
 if(__name__=="__main__"):
     me = Client()
     funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d":me.req} #add more methods here.
@@ -379,47 +379,47 @@ if(__name__=="__main__"):
                 funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
             if(target=="d"):
                 funcs[target](listofstuff[0],me.serverList) #request test
+"""
 
-
+#else:
+me = Client()
+funcs = {"a": me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d": me.req}  # add more methods here.
+args = sys.argv
+given = args.split()
+if (len(given)<10) :
+    print("insufficient arguments\n" +
+          "<Server 1 IP> <Server 1 Port> <key 1 number>, <Server 2 IP> <Server 2 Port> <key 2 number>,\n"+
+          " <Server 3 IP> <Server 3 Port> <key 3 number>, <Website>\n" +
+          "if localhost is IP, just leave it as localhost")
 else:
-    me = Client()
-    funcs = {"a": me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d": me.req}  # add more methods here.
-    args = sys.argv
-    given = args.split()
-    if (len(given)<10) :
-        print("insufficient arguments\n" +
-              "<Server 1 IP> <Server 1 Port> <key 1 number>, <Server 2 IP> <Server 2 Port> <key 2 number>,\n"+
-              " <Server 3 IP> <Server 3 Port> <key 3 number>, <Website>\n" +
-              "if localhost is IP, just leave it as localhost")
-    else:
-        for i in range(len(given)):
-            if(given[i]=="localhost"):
-                given[i]= gethostbyname(gethostname())
-        given[1] = int(given[1])
-        given[4] = int(given[4])
-        given[7] = int(given[7])
-        tempopen = open("publics/publictest" + str(given[2]) + ".pem", "rb")
-        publickey = serialization.load_pem_public_key(tempopen.read(),
-                                                      backend=default_backend())  #load up public key for 1st server
-        tempopen.close()
-        me.firstConnect(given[0], given[1], publickey)  # first connection to first server.
+    for i in range(len(given)):
+        if(given[i]=="localhost"):
+            given[i]= gethostbyname(gethostname())
+    given[1] = int(given[1])
+    given[4] = int(given[4])
+    given[7] = int(given[7])
+    tempopen = open("publics/publictest" + str(given[2]) + ".pem", "rb")
+    publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                  backend=default_backend())  #load up public key for 1st server
+    tempopen.close()
+    me.firstConnect(given[0], given[1], publickey)  # first connection to first server.
 
 
-        tempopen = open("publics/publictest" + str(given[5]) + ".pem", "rb")
-        publickey = serialization.load_pem_public_key(tempopen.read(),
-                                                      backend=default_backend())  #load up public key for 2nd server
-        tempopen.close()
-        me.moreConnect1(given[0], given[1],me.serverList, publickey)  # connection to second server.
+    tempopen = open("publics/publictest" + str(given[5]) + ".pem", "rb")
+    publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                  backend=default_backend())  #load up public key for 2nd server
+    tempopen.close()
+    me.moreConnect1(given[0], given[1],me.serverList, publickey)  # connection to second server.
 
 
 
-        tempopen = open("publics/publictest" + str(given[8]) + ".pem", "rb")
-        publickey = serialization.load_pem_public_key(tempopen.read(),
-                                                      backend=default_backend())   #load up public key for 3rd server
-        tempopen.close()
-        me.moreConnect2(given[0], given[1],me.serverList, publickey)  # connection to 3rd server.
+    tempopen = open("publics/publictest" + str(given[8]) + ".pem", "rb")
+    publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                  backend=default_backend())   #load up public key for 3rd server
+    tempopen.close()
+    me.moreConnect2(given[0], given[1],me.serverList, publickey)  # connection to 3rd server.
 
-        me.req(given[9],me.serverList)
+    me.req(given[9],me.serverList)
 
 
 

@@ -235,11 +235,13 @@ class Server():
                     else:
                         request =cell_to_next.payload
                         try:
-                            a = requests.get(request)
+                            header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"}
+                            a = requests.get(request,headers = header)
                             print("length of answer")
                             print(len(a.content))
                         except requests.exceptions.ConnectionError:
                             a = "ERROR"
+                            print("failed to receive a response from the website.")
 
 
                         IV = os.urandom(16)

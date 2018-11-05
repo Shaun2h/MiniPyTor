@@ -11,6 +11,8 @@ import cryptography.hazmat.primitives.asymmetric.padding
 import os
 import pickle
 from struct import *
+import sys
+import json
 import requests
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from celldef import cell
@@ -62,16 +64,16 @@ class Client():
             sendingCell,ECprivate_key = self.makeFirstConnectCell()
             #key encryption for RSA HERE USING SOME PUBLIC KEY
             readiedcell = pickle.dumps(sendingCell)
-            print("first connect Actual cell (encrypted bytes) ")
-            print(readiedcell)
+            #print("first connect Actual cell (encrypted bytes) ")
+            #print(readiedcell)
             encryptedCell = theirRSApublic.encrypt(readiedcell,cryptography.hazmat.primitives.asymmetric.padding.OAEP(
                 mgf = cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),algorithm = hashes.SHA256(),label = None))
-            print("first connect Actual cell(decrypted bytes)")
-            print(encryptedCell)
+            #print("first connect Actual cell(decrypted bytes)")
+            #print(encryptedCell)
             sock.send(encryptedCell)  # send my public key... tcp style
             theircell= sock.recv(4096)
             theircell = pickle.loads(theircell) #load up their cell
-            print(theircell.type)
+            #print(theircell.type)
             signature = theircell.signature #this cell isn't encrypted. Extract the signature to verify
             try:
                 theirRSApublic.verify(signature,theircell.salt,
@@ -91,31 +93,31 @@ class Client():
 
                 #Connection is established at this point.
 
-                print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
+                #print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
                 self.serverList.append(Server(gonnect, sock, derived_key, ECprivate_key,theirRSApublic,gonnectport))
                 return   # a server item is created.
 
             except InvalidSignature:
-                print("Something went wrong.. Signature was invalid.")
+                #print("Something went wrong.. Signature was invalid.")
                 return None
 
         except (error ,ConnectionResetError,ConnectionRefusedError)as e:
             print("disconnected or server is not online/ connection was refused.")
 
     def moreConnect1(self,gonnect,gonnectport,list_of_Servers_between,theirRSA):
-        print("MORE CONNECT 1")
+        #print("MORE CONNECT 1")
         #must send IV and a cell that is encrypted with the next public key
         #public key list will have to be accessed in order with list of servers.
         #number between is to know when to stop i guess.
         sendingCell, ECprivate_key = self.makeFirstConnectCell()
         sendingCell=pickle.dumps(sendingCell)
-        print("Innermost cell with keys")
-        print(sendingCell)
+        #print("Innermost cell with keys")
+        #print(sendingCell)
         sendingCell = theirRSA.encrypt(sendingCell, cryptography.hazmat.primitives.asymmetric.padding.OAEP(
             mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),
             algorithm=hashes.SHA256(), label=None))
-        print("Innermost cell with keys (Encrypted)")
-        print(sendingCell)
+        #print("Innermost cell with keys (Encrypted)")
+        #print(sendingCell)
         sendingCell = cell(sendingCell,Type="relay connect") #connection type. exit node always knows
         sendingCell.ip = gonnect
         sendingCell.port = gonnectport  # save the stuff i should be sending over.
@@ -131,8 +133,8 @@ class Client():
         try:
             sock = list_of_Servers_between[0].socket
             sock.send(pickle.dumps(sendingCell)) # send over the cell
-            print("cell sent: ")
-            print(pickle.dumps(sendingCell))
+            #print("cell sent: ")
+            #print(pickle.dumps(sendingCell))
             theircell = sock.recv(4096) # await answer
             #you now receive a cell with encrypted payload.
             counter =len(list_of_Servers_between)-1
@@ -142,13 +144,13 @@ class Client():
                 decryptor = cipher.decryptor()
                 decrypted = decryptor.update(theircell.payload)
                 decrypted += decryptor.finalize() #finalise decryption
-                print(decrypted)
+                #print(decrypted)
                 theircell = pickle.loads(decrypted)
                 counter-=1
-                print(theircell.payload)
+                #print(theircell.payload)
                 theircell = pickle.loads(theircell.payload)
             if (theircell.type == theircell._Types[3]):
-                print("FAILED AT CONNECTION!")
+                #print("FAILED AT CONNECTION!")
                 if (theircell.payload == "CONNECTIONREFUSED"):
                     print("Connection was refused. Is the server online yet?")
                 return
@@ -167,28 +169,28 @@ class Client():
             shared_key = ECprivate_key.exchange(ec.ECDH(), theirKey)
             derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=theircell.salt, info=None,backend=default_backend()).derive(shared_key)
             self.serverList.append(Server(gonnect, sock, derived_key, ECprivate_key, theirRSA, gonnectport))
-            print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
+            #print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
         except (ConnectionResetError,ConnectionRefusedError, error )as e:
-            print("Socket Error, removing from the list.")
+            #print("Socket Error, removing from the list.")
             del self.serverList[0] #remove it from the lsit
-            print("REMOVED SERVER 0 DUE TO FAILED CONNECTION")
+            #print("REMOVED SERVER 0 DUE TO FAILED CONNECTION")
 
 
 
     def moreConnect2(self, gonnect, gonnectport, list_of_Servers_between, theirRSA):
-        print("MORE CONNECT 2")
+        #print("MORE CONNECT 2")
         # must send IV and a cell that is encrypted with the next public key
         # public key list will have to be accessed in order with list of servers.
         # number between is to know when to stop i guess.
         sendingCell, ECprivate_key = self.makeFirstConnectCell()
         sendingCell = pickle.dumps(sendingCell)
-        print("Innermost cell with keys")
-        print(sendingCell)
+        #print("Innermost cell with keys")
+        #print(sendingCell)
         sendingCell = theirRSA.encrypt(sendingCell, cryptography.hazmat.primitives.asymmetric.padding.OAEP(
             mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA256()),
             algorithm=hashes.SHA256(), label=None))
-        print("Innermost cell with keys (Encrypted)")
-        print(sendingCell)
+        #print("Innermost cell with keys (Encrypted)")
+        #print(sendingCell)
         sendingCell = cell( sendingCell, Type="relay connect")  # connection type. exit node always knows
         sendingCell.ip = gonnect
         sendingCell.port = gonnectport  # save the stuff i should be sending over.
@@ -217,9 +219,9 @@ class Client():
             sock.send(pickle.dumps(sendingCell))  # send over the cell
             theircell = sock.recv(4096)  # await answer
             # you now receive a cell with encrypted payload.
-            print(theircell)
+            #print(theircell)
             theircell = pickle.loads(theircell)
-            print(theircell.payload)
+            #print(theircell.payload)
             counter=0
             while (counter < len(list_of_Servers_between)):
                 cipher = Cipher(algorithms.AES(list_of_Servers_between[counter].key), modes.CBC(theircell.IV),
@@ -227,12 +229,12 @@ class Client():
                 decryptor = cipher.decryptor()
                 decrypted = decryptor.update(theircell.payload)
                 decrypted += decryptor.finalize()  # finalise decryption
-                print(decrypted)
+                #print(decrypted)
                 theircell = pickle.loads(decrypted)
                 counter += 1
                 theircell = pickle.loads(theircell.payload)
             if (theircell.type == theircell._Types[3]):
-                print("FAILED AT CONNECTION!")
+                #print("FAILED AT CONNECTION!")
                 return
             # theircell = pickle.loads(theircell.payload)
 
@@ -251,12 +253,12 @@ class Client():
             derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=theircell.salt, info=None,
                                backend=default_backend()).derive(shared_key)
             self.serverList.append(Server(gonnect, sock, derived_key, ECprivate_key, theirRSA, gonnectport))
-            print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
+            #print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
         except error:
-            print("socketerror")
+            print("socket error occurred")
 
     def req(self,request, list_of_Servers_between): #send out stuff in router.
-        print("REQUEST SENDING TEST")
+        #print("REQUEST SENDING TEST")
         # must send IV and a cell that is encrypted with the next public key
         # public key list will have to be accessed in order with list of servers.
         # number between is to know when to stop i guess.
@@ -298,12 +300,12 @@ class Client():
             sock.send(pickle.dumps(sendingCell))  # send over the cell
             theircell = sock.recv(32768)  # await answer
             # you now receive a cell with encrypted payload.
-            print("received cell")
-            print(len(theircell))
-            print(theircell)
+            #print("received cell")
+            #print(len(theircell))
+            #print(theircell)
             theircell = pickle.loads(theircell)
-            print("received cell payload")
-            print(theircell.payload)
+            #print("received cell payload")
+            #print(theircell.payload)
             counter = 0
             while (counter < len(list_of_Servers_between)):
                 cipher = Cipher(algorithms.AES(list_of_Servers_between[counter].key), modes.CBC(theircell.IV),
@@ -317,80 +319,127 @@ class Client():
                     theircell = pickle.loads(theircell.payload)
 
             if (theircell.type == theircell._Types[3]):
-                print("FAILED AT CONNECTION!")
+                #print("FAILED AT CONNECTION!")
                 return
             # theircell = pickle.loads(theircell.payload)
             response = pickle.loads(theircell.payload)
-            print(response.content)
-            print("questionably succeeded....\n\n")
-            return response
+            #print(response.content)
+            #print("questionably succeeded....\n\n")
+            return_dict = {"content":response.content, "status code": response.status_code}
+            print (json.dumps(return_dict))
         except error:
             print("socketerror")
 
+if(__name__=="__main__"):
+    me = Client()
+    funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d":me.req} #add more methods here.
+    while(True):
+        target = input(" 'a' for adding first connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
+                       " 'b' for adding second connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
+                       " 'c' for adding third connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
+                       " 'd' for adding testing the connection to the last node. arguments are: '<type of request>, <request>'\n"
+                       + " If you want localhost, type 'LOCAL' \n"
+                       )
+        arguments = input("Now tell me what you want to use as an argument if any. split by spaces. else just press enter.\n")
+        listofstuff = arguments.split()
+        if(target in funcs.keys()):
+            if (listofstuff[0] == "LOCAL"):
+                listofstuff[0] = gethostbyname(gethostname())
+            if(target=="a"):
+                listofstuff[1]=int(listofstuff[1])
+                #print(listofstuff[0])
+                #print(listofstuff[1])
+                #print(listofstuff[2])
+                listofstuff[2]=int(listofstuff[2])
+                tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
+                publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
+                funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..
+                tempopen.close()
+            if (target == "b"):
+                listofstuff[1] = int(listofstuff[1])
+                #print(listofstuff[0])
+                #print(listofstuff[1])
+                #print(listofstuff[2])
+                listofstuff[2] = int(listofstuff[2])
+                tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
+                publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                              backend=default_backend())  # used for signing, etc.
+                funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
+            if (target == "c"):
+                listofstuff[1] = int(listofstuff[1])
+                #print(listofstuff[0])
+                #print(listofstuff[1])
+                #print(listofstuff[2])
+                listofstuff[2] = int(listofstuff[2])
+                tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
+                publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                              backend=default_backend())  # used for signing, etc.
+                funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
+            if(target=="d"):
+                funcs[target](listofstuff[0],me.serverList) #request test
 
-me = Client()
-funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d":me.req} #add more methods here.
-while(True):
-    target = input(" 'a' for adding first connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
-                   " 'b' for adding second connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
-                   " 'c' for adding third connection. arguments are: '<IP> <PORT> <IDENTITY>'\n" +
-                   " 'd' for adding testing the connection to the last node. arguments are: '<type of request>, <request>'\n"
-                   + " If you want localhost, type 'LOCAL' \n"
-                   )
-    arguments = input("Now tell me what you want to use as an argument if any. split by spaces. else just press enter.\n")
-    listofstuff = arguments.split()
-    if(target in funcs.keys()):
-        if (listofstuff[0] == "LOCAL"):
-            listofstuff[0] = gethostbyname(gethostname())
-        if(target=="a"):
-            listofstuff[1]=int(listofstuff[1])
-            print(listofstuff[0])
-            print(listofstuff[1])
-            print(listofstuff[2])
-            listofstuff[2]=int(listofstuff[2])
-            tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
-            publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
-            funcs[target](listofstuff[0],listofstuff[1],publickey) #arguments should only be the ip address..
-            tempopen.close()
-        if (target == "b"):
-            listofstuff[1] = int(listofstuff[1])
-            print(listofstuff[0])
-            print(listofstuff[1])
-            print(listofstuff[2])
-            listofstuff[2] = int(listofstuff[2])
-            tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
-            publickey = serialization.load_pem_public_key(tempopen.read(),
-                                                          backend=default_backend())  # used for signing, etc.
-            funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
-        if (target == "c"):
-            listofstuff[1] = int(listofstuff[1])
-            print(listofstuff[0])
-            print(listofstuff[1])
-            print(listofstuff[2])
-            listofstuff[2] = int(listofstuff[2])
-            tempopen = open("publics/publictest" + str(listofstuff[2]) + ".pem", "rb")
-            publickey = serialization.load_pem_public_key(tempopen.read(),
-                                                          backend=default_backend())  # used for signing, etc.
-            funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
-        if(target=="d"):
-            funcs[target](listofstuff[0],me.serverList) #request test
+
+else:
+    me = Client()
+    funcs = {"a": me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d": me.req}  # add more methods here.
+    args = sys.argv
+    given = args.split()
+    if (len(given)<10) :
+        print("insufficient arguments\n" +
+              "<Server 1 IP> <Server 1 Port> <key 1 number>, <Server 2 IP> <Server 2 Port> <key 2 number>,\n"+
+              " <Server 3 IP> <Server 3 Port> <key 3 number>, <Website>\n" +
+              "if localhost is IP, just leave it as localhost")
+    else:
+        for i in range(len(given)):
+            if(given[i]=="localhost"):
+                given[i]= gethostbyname(gethostname())
+        given[1] = int(given[1])
+        given[4] = int(given[4])
+        given[7] = int(given[7])
+        tempopen = open("publics/publictest" + str(given[2]) + ".pem", "rb")
+        publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                      backend=default_backend())  #load up public key for 1st server
+        tempopen.close()
+        me.firstConnect(given[0], given[1], publickey)  # first connection to first server.
+
+
+        tempopen = open("publics/publictest" + str(given[5]) + ".pem", "rb")
+        publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                      backend=default_backend())  #load up public key for 2nd server
+        tempopen.close()
+        me.moreConnect1(given[0], given[1],me.serverList, publickey)  # connection to second server.
+
+
+
+        tempopen = open("publics/publictest" + str(given[8]) + ".pem", "rb")
+        publickey = serialization.load_pem_public_key(tempopen.read(),
+                                                      backend=default_backend())   #load up public key for 3rd server
+        tempopen.close()
+        me.moreConnect2(given[0], given[1],me.serverList, publickey)  # connection to 3rd server.
+
+        me.req(given[9],me.serverList)
+
+
+
+
+
 
 
 """
 tempopen = open("publics/publictest" + "0"+ ".pem", "rb")
 publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
 tempopen.close()
-print("\n\n\n\n")
+#print("\n\n\n\n")
 me.firstConnect(gethostbyname(gethostname()), 45000,publickey)
 tempopen = open("publics/publictest" + "1"+ ".pem", "rb")
 publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
 tempopen.close()
-print("\n\n\n\n")
+#print("\n\n\n\n")
 me.moreConnect1(gethostbyname(gethostname()),45001,me.serverList,publickey)
 tempopen = open("publics/publictest" + "2"+ ".pem", "rb")
 publickey = serialization.load_pem_public_key(tempopen.read(),backend=default_backend())  # used for signing, etc.
 tempopen.close()
-print("\n\n\n\n")
+#print("\n\n\n\n")
 me.moreConnect2(gethostbyname(gethostname()),45002,me.serverList,publickey)
 me.req("test req type","test req",me.serverList)
 """

@@ -44,8 +44,8 @@ class DirectoryServer():
             except (pickle.PickleError, pickle.PicklingError, pickle.UnpicklingError) as e:
                 continue
 
-            if (receivedCell== type(cell(""))): #ensure it is indeed a cell.
-                if(cell.type == "giveDirect" ): #
+            if (type(receivedCell)== type(cell(""))): #ensure it is indeed a cell.
+                if(receivedCell.type == "giveDirect" ): #
                     signedbytearray= receivedCell.salt
                     signature = receivedCell.signature
                     identity = receivedCell.payload

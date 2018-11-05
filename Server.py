@@ -40,7 +40,7 @@ class Server():
     CLIENTSOCKS = []
 
     def __init__(self, port_number, identity):
-        tempopen = open("privates/privatetest"+str(identity)+".pem", "rb")
+        tempopen = open(os.path.join(os.path.dirname(__file__), "privates/privatetest" + str(identity) + ".pem"), "rb")
         self.true_private_key = serialization.load_pem_private_key(tempopen.read(
         ), password=None, backend=default_backend())  # used for signing, etc.
         # public key for sending out.

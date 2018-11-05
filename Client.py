@@ -355,7 +355,9 @@ class Client():
                     response.encoding), "status code": response.status_code}
                 print(json.dumps(return_dict))
             else:
-                print(json.dumps({"content": "FAILED!", "status code": 404}))
+                # TODO - the error code should be specific to our implementation, not generic ones
+                # e.g. node offline, decryption failure etc etc
+                print(json.dumps({"content": "", "status": 404}))
         except error:
             print("socketerror")
 

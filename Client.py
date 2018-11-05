@@ -325,7 +325,9 @@ class Client():
             response = pickle.loads(theircell.payload)
             #print(response.content)
             #print("questionably succeeded....\n\n")
-            return_dict = {"content":response.content, "status code": response.status_code}
+            print(response.content)
+            print(response.status_code)
+            return_dict = {"content":response.content.decode(response.encoding), "status code": response.status_code}
             print (json.dumps(return_dict))
         except error:
             print("socketerror")

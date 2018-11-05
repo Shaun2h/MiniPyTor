@@ -15,7 +15,6 @@ class Serverreg():
         self.ip = ip
         self.port = port
         self.socket = socket
-        pass
 
 class direct():
     def __init__(self):

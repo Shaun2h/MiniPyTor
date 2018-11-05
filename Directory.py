@@ -49,7 +49,7 @@ class DirectoryServer():
                     signedbytearray= receivedCell.salt
                     signature = receivedCell.signature
                     identity = receivedCell.payload
-                    
+
                     try:
                         tempopen = open("publics/publictest" + str(identity) + ".pem", "rb")
                         theirpublickey = serialization.load_pem_private_key(tempopen.read(), password=None,backend=default_backend())  # used for signing, etc.

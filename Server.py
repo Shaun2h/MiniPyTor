@@ -135,7 +135,7 @@ class Server():
                     print(received)
                     if(len(received)==0):
                         raise ConnectionResetError
-                except (error, ConnectionResetError )as e:
+                except (error, ConnectionResetError,ConnectionAbortedError )as e:
 
                     print("CLIENT WAS CLOSED!")
                     clientWhoSent.socket.close()
@@ -155,36 +155,45 @@ class Server():
                 cell_to_next = pickle.loads(decrypted)
                 print(cell_to_next.type)
                 if(cell_to_next.type == "relay connect"): #is a request for a relay connect
-                    sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
-                    sock.connect((cell_to_next.ip, cell_to_next.port))
-                    print((cell_to_next.ip, cell_to_next.port))
-                    print("cell to next")
-                    print(decrypted)
-                    print("payload")
-                    print(cell_to_next.payload)
-                    sock.send(cell_to_next.payload)  # send over the cell payload
-                    theircell = sock.recv(4096)  # await answer
-                    print("got values")
-                    print(theircell)
-                    IV = os.urandom(16)
-                    cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
-                    encryptor = cipher.encryptor()
-                    if(theircell==b""):
-                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell("",Type = "failed"))))
+                    try:
+                        sock = socket(AF_INET, SOCK_STREAM)  # your connection is TCP.
+                        sock.connect((cell_to_next.ip, cell_to_next.port))
+                        print((cell_to_next.ip, cell_to_next.port))
+                        print("cell to next")
+                        print(decrypted)
+                        print("payload")
+                        print(cell_to_next.payload)
+                        sock.send(cell_to_next.payload)  # send over the cell payload
+                        theircell = sock.recv(4096)  # await answer
+                        print("got values")
+                        print(theircell)
+                        IV = os.urandom(16)
+                        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
+                        encryptor = cipher.encryptor()
+                        if(theircell==b""):
+                            encrypted = encryptor.update(self.padder128(pickle.dumps(cell("",Type = "failed"))))
+                            encrypted += encryptor.finalize()
+                            print("sent failed")
+                            i.send(pickle.dumps(cell(encrypted, IV=IV, Type="failed")))
+                        else:
+                            encrypted = encryptor.update(self.padder128(pickle.dumps(cell(theircell,Type = "ConnectResp"))))
+                            encrypted += encryptor.finalize()
+                            print("sent valid response")
+                            i.send(pickle.dumps(cell(encrypted,IV=IV,Type = "AddCon")))
+                            clientWhoSent.bounceIP = cell_to_next.ip
+                            clientWhoSent.bouncePORT = cell_to_next.port
+                            clientWhoSent.bounceSocket = sock
+                            print("connection success.\n\n\n\n\n")
+                    except (ConnectionRefusedError,ConnectionResetError,ConnectionAbortedError,error)as e:
+                        print("failed to connect to other server. sending back failure message.")
+                        IV = os.urandom(16)
+                        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
+                        encryptor = cipher.encryptor()
+                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(pickle.dumps(cell("CONNECTIONREFUSED", Type="failed")),Type = "failed"))))
                         encrypted += encryptor.finalize()
-                        print("sent failed")
                         i.send(pickle.dumps(cell(encrypted, IV=IV, Type="failed")))
-                    else:
-                        encrypted = encryptor.update(self.padder128(pickle.dumps(cell(theircell,Type = "ConnectResp"))))
-                        encrypted += encryptor.finalize()
-                        print("sent valid response")
-                        i.send(pickle.dumps(cell(encrypted,IV=IV,Type = "AddCon")))
-                        clientWhoSent.bounceIP = cell_to_next.ip
-                        clientWhoSent.bouncePORT = cell_to_next.port
-                        clientWhoSent.bounceSocket = sock
-                        print("connection success.\n\n\n\n\n")
+                        print("sent back failure message.")
 
-                    pass  #i am passing on the message.
                 elif (cell_to_next.type =="relay"):  # is an item to be relayed.
                     if(clientWhoSent.bounceSocket==None): #check if there is bounce socket
                         return

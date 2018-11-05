@@ -99,7 +99,7 @@ class Client():
                 print("Something went wrong.. Signature was invalid.")
                 return None
 
-        except (error ,ConnectionResetError)as e:
+        except (error ,ConnectionResetError,ConnectionRefusedError)as e:
             print("disconnected or server is not online/ connection was refused.")
 
     def moreConnect1(self,gonnect,gonnectport,list_of_Servers_between,theirRSA):
@@ -137,9 +137,6 @@ class Client():
             #you now receive a cell with encrypted payload.
             counter =len(list_of_Servers_between)-1
             theircell = pickle.loads(theircell)
-            if(theircell.type==theircell._Types[3]):
-                print("FAILED AT CONNECTION!")
-                return
             while(counter>=0):
                 cipher = Cipher(algorithms.AES(list_of_Servers_between[counter].key),modes.CBC(theircell.IV),backend=default_backend())
                 decryptor = cipher.decryptor()
@@ -148,7 +145,13 @@ class Client():
                 print(decrypted)
                 theircell = pickle.loads(decrypted)
                 counter-=1
+                print(theircell.payload)
                 theircell = pickle.loads(theircell.payload)
+            if (theircell.type == theircell._Types[3]):
+                print("FAILED AT CONNECTION!")
+                if (theircell.payload == "CONNECTIONREFUSED"):
+                    print("Connection was refused. Is the server online yet?")
+                return
             #theircell = pickle.loads(theircell.payload)
 
             signature = theircell.signature  # this cell isn't encrypted. Extract the signature to verify
@@ -165,8 +168,11 @@ class Client():
             derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=theircell.salt, info=None,backend=default_backend()).derive(shared_key)
             self.serverList.append(Server(gonnect, sock, derived_key, ECprivate_key, theirRSA, gonnectport))
             print("connected successfully to server @ " + gonnect + "   Port: " + str(gonnectport))
-        except error:
-            print("socketerror")
+        except (ConnectionResetError,ConnectionRefusedError, error )as e:
+            print("Socket Error, removing from the list.")
+            del self.serverList[0] #remove it from the lsit
+            print("REMOVED SERVER 0 DUE TO FAILED CONNECTION")
+
 
 
     def moreConnect2(self, gonnect, gonnectport, list_of_Servers_between, theirRSA):

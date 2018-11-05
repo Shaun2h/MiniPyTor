@@ -384,8 +384,15 @@ if(__name__=="__main__"):
 #else:
 me = Client()
 funcs = {"a": me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d": me.req}  # add more methods here.
-args = sys.argv
-given = args.split()
+given = sys.argv
+if (len(given)==1):
+    print("insufficient arguments\n" +
+          "<Server 1 IP> <Server 1 Port> <key 1 number>, <Server 2 IP> <Server 2 Port> <key 2 number>,\n" +
+          " <Server 3 IP> <Server 3 Port> <key 3 number>, <Website>\n" +
+          "if localhost is IP, just leave it as localhost")
+    quit()
+
+
 if (len(given)<10) :
     print("insufficient arguments\n" +
           "<Server 1 IP> <Server 1 Port> <key 1 number>, <Server 2 IP> <Server 2 Port> <key 2 number>,\n"+

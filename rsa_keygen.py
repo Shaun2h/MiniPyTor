@@ -19,14 +19,7 @@ for i in range(100):
     print(publictest.read() == publicbytes)
     privatetest.close()
     publictest.close()
-"""
-privatetest = open("privatetest.pem","rb")
-publictest = open("publictest.pem","rb")
-print(privatebytes)
-print(privatetest.read())
-print(publicbytes)
-print(publictest.read())
-"""
+
 for i in range(30):
     with open("privates/privatetest"+str(i)+".pem","rb") as key_file:
         private_key = serialization.load_pem_private_key(key_file.read(), password=None, backend=default_backend())

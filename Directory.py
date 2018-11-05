@@ -15,7 +15,14 @@ class Serverreg():
         self.ip = ip
         self.port = port
         self.socket = socket
+<<<<<<< HEAD
         #self.latency = latency
+=======
+
+class direct():
+    def __init__(self):
+        pass
+>>>>>>> 19adcae1d735b3019ddc51c90f1caa3713c1c23c
 
 class DirectoryServer():
     def __init__(self):

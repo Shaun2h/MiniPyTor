@@ -1,5 +1,5 @@
 class cell():
-    _Types = ["AddCon", "Req", "ConnectResp", "FAILED", "relay connect","relay","giveDirect","getDirect"]
+    _Types = ["AddCon", "Req", "ConnectResp", "FAILED", "relay connect","relay","giveDirect","getDirect","checkup"]
 
     def __init__(self, payload, IV=None, salt=None, signature=None, Type =None):
         self.payload = payload
@@ -17,6 +17,13 @@ class cell():
                 self.type = self._Types[1]  # is a plain request. so essentially some key is being pushed out here.
             elif (Type == "ConnectResp"):
                 self.type = self._Types[2]  #is a response to a connection
-            else:
+            elif(Type == "relay"):
                 self.type = self._Types[5] #indicates relay
+            elif (Type == "giveDirect"):
+                self.type = self._Types[6]  # indicates relay
+            elif (Type == "getDirect"):
+                self.type = self._Types[7]  # indicates relay
+            elif (Type == "checkup"):
+                self.type = self._Types[8]  # indicates relay
+
 

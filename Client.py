@@ -323,15 +323,19 @@ class Client():
                 return
             # theircell = pickle.loads(theircell.payload)
             response = pickle.loads(theircell.payload)
-            #print(response.content)
-            #print("questionably succeeded....\n\n")
-            print(response.content)
-            print(response.status_code)
-            return_dict = {"content":response.content.decode(response.encoding), "status code": response.status_code}
-            print (json.dumps(return_dict))
+            if(type(response) != type("")):
+
+                #print(response.content)
+                #print("questionably succeeded....\n\n")
+                print(response.content)
+                print(response.status_code)
+                return_dict = {"content":response.content.decode(response.encoding), "status code": response.status_code}
+                print (json.dumps(return_dict))
+            else:
+                print(json.dumps({"content": "FAILED!", "status code": 404}))
         except error:
             print("socketerror")
-"""
+
 if(__name__=="__main__"):
     me = Client()
     funcs={"a":me.firstConnect, "b": me.moreConnect1, "c": me.moreConnect2, "d":me.req} #add more methods here.
@@ -379,7 +383,7 @@ if(__name__=="__main__"):
                 funcs[target](listofstuff[0], listofstuff[1],me.serverList, publickey)  # arguments should only be the ip address..
             if(target=="d"):
                 funcs[target](listofstuff[0],me.serverList) #request test
-"""
+
 
 #else:
 me = Client()

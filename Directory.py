@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidSignature
 
 socket.socket()
-class Server():
+class Serverreg():
     def __init__(self,ip,port,socket):
         self.ip = ip
         self.port = port
@@ -21,10 +21,12 @@ class direct():
     def __init__(self):
         pass
 
-Servers = []
 class DirectoryServer():
     def __init__(self):
-        self.identities =[]
+        self.lasttime = time.time()
+        self.registered_servers = []
+        self.socketlist = []
+        self.identities = []
         for i in range(100):
             self.identities.append(i) #add 1 to 100 for the identities.
 
@@ -35,42 +37,49 @@ class DirectoryServer():
 
     def mainloop(self):
         while(True):
-            readready, _, _ = select.select([self.socket], [], [])
-            print("obtained a server connection.")
-            (serversocket,myport) = readready[0].accept
-            obtained = serversocket.recv(4096) # obtain the data sent over.
-            try:
-                receivedCell = pickle.loads(obtained)
-            except (pickle.PickleError, pickle.PicklingError, pickle.UnpicklingError) as e:
-                continue
+            if ((time.time() - self.lasttime) > 30.00):
+                for i in self.registered_servers:
+                    i.time = time.time()
+                    i.socket.send(cell("",Type= "checkup"))
+            else:
+                readready, _, _ = select.select([self.socket]+self.socketlist, [], [])
+                print("obtained a server connection.")
+                for i in readready:
+                    if(i==self.socket): #is receiving a new connection request.
+                        (serversocket,myport) = readready[0].accept
+                        obtained = serversocket.recv(4096) # obtain the data sent over.
+                        try:
+                            receivedCell = pickle.loads(obtained)
+                        except (pickle.PickleError, pickle.PicklingError, pickle.UnpicklingError) as e:
+                            continue
 
-            if (type(receivedCell)== type(cell(""))): #ensure it is indeed a cell.
-                if(receivedCell.type == "giveDirect" ): #
-                    signedbytearray= receivedCell.salt
-                    signature = receivedCell.signature
-                    identity = receivedCell.payload
+                        if (type(receivedCell)== type(cell(""))): #ensure it is indeed a cell.
+                            if(receivedCell.type == "giveDirect" ): #
+                                signedbytearray= receivedCell.salt
+                                signature = receivedCell.signature
+                                identity = receivedCell.payload
 
-                    try:
-                        tempopen = open("publics/publictest" + str(identity) + ".pem", "rb")
-                        theirpublickey = serialization.load_pem_private_key(tempopen.read(), password=None,backend=default_backend())  # used for signing, etc.
-                        tempopen.close()
-                    except FileNotFoundError:
-                        continue #i.e the identity is not established.
+                                try:
+                                    tempopen = open("publics/publictest" + str(identity) + ".pem", "rb")
+                                    theirpublickey = serialization.load_pem_private_key(tempopen.read(), password=None,backend=default_backend())  # used for signing, etc.
+                                    tempopen.close()
+                                except FileNotFoundError:
+                                    continue #i.e the identity is not established.
 
-                    try:
-                        theirpublickey.verify(signature, signedbytearray,
-                                    cryptography.hazmat.primitives.asymmetric.padding.PSS(
-                                        mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
-                                        salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),
-                                    hashes.SHA256())
-                    except InvalidSignature:
-                        serversocket.close() #reject. signature validation failed.
-                        continue
-                    ip,port = serversocket.getpeername() # obtain the ip and port of that server.
-                    latest = Server(ip,port,serversocket,identity)
-                else:
-                    serversocket.close()
-                    continue # reject connection as it does not contain a valid cell.
+                                try:
+                                    theirpublickey.verify(signature, signedbytearray,
+                                                cryptography.hazmat.primitives.asymmetric.padding.PSS(
+                                                    mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
+                                                    salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH),
+                                                hashes.SHA256())
+                                except InvalidSignature:
+                                    serversocket.close() #reject. signature validation failed.
+                                    continue
+                                ip,port = serversocket.getpeername() # obtain the ip and port of that server.
+                                self.registered_servers.append(Serverreg(ip,port,serversocket,identity))
+                            else:
+                                serversocket.close()
+                                continue # reject connection as it does not contain a valid cell.
 
 
 

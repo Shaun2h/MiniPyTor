@@ -89,6 +89,8 @@ class Server():
             if (i == self.serversocket):  # i've gotten a new connection
                 print("client get")
                 (clientsocket, address) = self.serversocket.accept()
+                #clientsocket.setblocking(0)
+                clientsocket.settimeout(0.3)
                 try:
                     obtainedCell = clientsocket.recv(4096)  # obtain their public key
                     try:
@@ -117,8 +119,8 @@ class Server():
                     print(clientclass.socket.getpeername())
                     print("Connected to ONE client.\n\n\n")
 
-                except (error,ConnectionResetError )as e: #error is socket error here.
-                    print("socket ERROR")
+                except (error,ConnectionResetError, timeout )as e: #error is socket error here.
+                    print("socket ERROR! might have timed out.")
                     if (clientclass != None):
                         self.CLIENTS.remove(clientclass)
                         # just in case.
@@ -135,9 +137,9 @@ class Server():
                     print(received)
                     if(len(received)==0):
                         raise ConnectionResetError
-                except (error, ConnectionResetError,ConnectionAbortedError )as e:
+                except (error, ConnectionResetError,ConnectionAbortedError, timeout)as e:
 
-                    print("CLIENT WAS CLOSED!")
+                    print("CLIENT WAS CLOSED! or timed out.")
                     clientWhoSent.socket.close()
                     if(clientWhoSent.bounceSocket!=None):
                         clientWhoSent.bounceSocket.close()
@@ -184,8 +186,8 @@ class Server():
                             clientWhoSent.bouncePORT = cell_to_next.port
                             clientWhoSent.bounceSocket = sock
                             print("connection success.\n\n\n\n\n")
-                    except (ConnectionRefusedError,ConnectionResetError,ConnectionAbortedError,error)as e:
-                        print("failed to connect to other server. sending back failure message.")
+                    except (ConnectionRefusedError,ConnectionResetError,ConnectionAbortedError,error,timeout)as e:
+                        print("failed to connect to other server. sending back failure message, or timed out.")
                         IV = os.urandom(16)
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
                         encryptor = cipher.encryptor()
@@ -205,7 +207,10 @@ class Server():
                         print(cell_to_next.payload)
                         print(cell_to_next.type)
                         sock.send(cell_to_next.payload) # send over the cell
-                        theircell = sock.recv(32768)  # await answer
+                        try:
+                            theircell = sock.recv(32768)  # await answer
+                        except timeout:
+                            theircell = "request timed out!"
                         print("got answer back.. as a relay.")
                         print(len(theircell))
                         print(theircell)
@@ -229,9 +234,14 @@ class Server():
                         print("INVALID REQUEST SENT BACK")
                     else:
                         request =cell_to_next.payload
-                        a = requests.get(request)
-                        print("length of answer")
-                        print(len(a.content))
+                        try:
+                            a = requests.get(request)
+                            print("length of answer")
+                            print(len(a.content))
+                        except requests.exceptions.ConnectionError:
+                            a = "ERROR"
+
+
                         IV = os.urandom(16)
                         cipher = Cipher(algorithms.AES(derived_key), modes.CBC(IV), backend=default_backend())
                         encryptor = cipher.encryptor()
